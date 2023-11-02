@@ -28,17 +28,19 @@ runs:
     - name: Clone action
       run: |
         git clone https://github.com/AmosHuKe/pub-dashboard temp/pub-dashboard
+        cd temp/pub-dashboard
       shell: bash
 
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version-file: temp/pub-dashboard/go.mod
+        go-version-file: go.mod
       id: go
     
     - name: Update Markdown
       run: |
-        go run temp/pub-dashboard/main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        go run main.go -filename ../../${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        cd ../../
         rm -rf temp
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
