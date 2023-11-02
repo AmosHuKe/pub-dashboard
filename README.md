@@ -1,5 +1,7 @@
 # pub-dashboard
 
+Example: [Example.md](Example.md)
+
 ## Setup 💻
 
 1.Add comments to the place where you want to update in the markdown file.
@@ -26,7 +28,7 @@ jobs:
       - name: run pub-dashboard
         uses: AmosHuKe/pub-dashboard@main
         with:
-          filename: "test.md"
+          filename: "Example.md"
           package_list: "flutter_tilt,bb,cc"
           sort_field: "published"
           sort_mode: "asc"
@@ -36,8 +38,8 @@ jobs:
 
 | Setting | Default | Value | Description |  
 |---------|---------|-------|-------------|
-| filename | README.md | | Markdown file <br/> e.g. "README.md" "test/test.md" |
-| package_list <sup>`required`</sup> | | | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
+| filename | README.md | - | Markdown file <br/> e.g. "README.md" "test/test.md" |
+| package_list <sup>`required`</sup> | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
 | sort_field | name | name, published | Sort field |
 | sort_mode | asc | asc, desc | Sort mode |
 
