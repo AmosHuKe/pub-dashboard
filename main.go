@@ -96,7 +96,7 @@ func getPackageInfo(packagesName string) []PackageInfo {
 		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["issue_tracker"].(string); ok {
 			pubIssueTracker = value
 		}
-		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["published"].(string); ok {
+		if value, ok := data["latest"].(map[string]interface{})["published"].(string); ok {
 			pubPublished = value
 		}
 		if pubName != "" {
