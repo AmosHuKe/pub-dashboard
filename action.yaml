@@ -39,6 +39,9 @@ runs:
     
     - name: Update Markdown
       run: |
+        cd temp/pub-dashboard/
+        go get
+        cd ../../
         go run temp/pub-dashboard/main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         rm -rf temp
         git config user.name "github-actions[bot]"
