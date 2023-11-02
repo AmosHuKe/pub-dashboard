@@ -34,7 +34,7 @@ runs:
     - name: Setup Go
       uses: actions/setup-go@v4.1.0
       with:
-        go-version-file: temp/pub-dashboard/go.mod
+        go-version-file: temp/github.com/AmosHuKe/pub-dashboard/go.mod
         cache: false
       id: go
     
