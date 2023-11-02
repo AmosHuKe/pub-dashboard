@@ -9,7 +9,11 @@
 <!-- md:PubDashboard end -->
 ```
 
-2.Edit the settings in `.github/workflows/pub-dashboard.yml`
+2.Enable read/write permissions
+
+> Settings -> Actions -> General -> Workflow permissions -> Read and write permissions 
+
+3.Edit the settings in `.github/workflows/pub-dashboard.yml`
 
 ```yaml
 ...
