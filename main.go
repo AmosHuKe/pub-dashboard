@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -12,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/tidwall/gjson"
 )
 
 type PackageInfo struct {
@@ -76,13 +75,30 @@ func getPackageInfo(packagesName string) []PackageInfo {
 		if getErr != nil {
 			fmt.Println(getErr)
 		}
-		pubInfo := string(jsonData)
-		pubName := gjson.Get(pubInfo, "name").Str
-		pubDescription := gjson.Get(pubInfo, "latest.pubspec.description").Str
-		pubHomepage := gjson.Get(pubInfo, "latest.pubspec.homepage").Str
-		pubRepository := gjson.Get(pubInfo, "latest.pubspec.repository").Str
-		pubIssueTracker := gjson.Get(pubInfo, "latest.pubspec.issue_tracker").Str
-		pubPublished := gjson.Get(pubInfo, "latest.published").Str
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+			fmt.Println(err)
+		}
+		// pubInfo := string(jsonData)
+		var pubName, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
+		if value, ok := data["name"].(string); ok {
+			pubName = value
+		}
+		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["description"].(string); ok {
+			pubDescription = value
+		}
+		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["homepage"].(string); ok {
+			pubHomepage = value
+		}
+		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["repository"].(string); ok {
+			pubRepository = value
+		}
+		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["issue_tracker"].(string); ok {
+			pubIssueTracker = value
+		}
+		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["published"].(string); ok {
+			pubPublished = value
+		}
 		if pubName != "" {
 			// 可获取信息
 			packageInfoList = append(
