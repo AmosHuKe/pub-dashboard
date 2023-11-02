@@ -25,16 +25,19 @@ runs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
 
+    - name: Clone action
+      run: |
+        git clone https://github.com/AmosHuKe/pub-dashboard temp/pub-dashboard
+        cd temp/pub-dashboard
+
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version-file: go.mod
+        go-version-file: temp/pub-dashboard/go.mod
       id: go
     
     - name: Update Markdown
       run: |
-        git clone https://github.com/AmosHuKe/pub-dashboard temp/pub-dashboard
-        cd temp/pub-dashboard
         go run main.go -filename ../../${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd ../../
         rm -rf temp
