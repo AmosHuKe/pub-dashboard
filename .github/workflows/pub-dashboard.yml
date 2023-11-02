@@ -15,6 +15,6 @@ jobs:
         uses: AmosHuKe/pub-dashboard@main
         with:
           filename: "Example.md"
-          package_list: "extended_image,flutter_wechat_assets_picker,flutter_tilt"
+          package_list: "extended_image,wechat_assets_picker,flutter_tilt"
           sort_field: "published"
           sort_mode: "asc"
