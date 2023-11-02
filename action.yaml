@@ -40,7 +40,7 @@ runs:
     
     - name: Update Markdown
       run: |
-        go run $tempPath/main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        go run temp/github.com/AmosHuKe/pub-dashboard/main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         rm -rf temp
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
