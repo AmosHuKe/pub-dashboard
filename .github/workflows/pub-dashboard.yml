@@ -1,0 +1,20 @@
+name: pub-dashboard
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  pub-dashboard-job:
+    runs-on: ubuntu-latest
+    name: pub-dashboard
+    steps:
+      - name: run pub-dashboard
+        uses: AmosHuKe/pub-dashboard@main
+        with:
+          filename: "test.md"
+          package_list: "flutter_tilt"
+          sort_field: "published"
+          sort_mode: "asc"

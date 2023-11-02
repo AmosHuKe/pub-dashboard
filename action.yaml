@@ -1,0 +1,42 @@
+name: 'pub-dashboard'
+description: 'Package dashboard table'
+author: 'AmosHuKe'
+branding:
+  icon: activity
+  color: blue
+inputs:
+  filename:
+    required: false
+    default: README.md
+  package_list:
+    description: 'e.g aa,flutter_tilt,cc'
+    required: true
+  sort_field:
+    description: 'name | published'
+    required: false
+    default: name
+  sort_mode:
+    description: 'asc | desc'
+    required: false
+    default: asc
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+      id: go
+    
+    - name: Update Markdown
+      run: |
+        go run main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add .
+        git commit -m "docs(pub-dashboard): pub-dashboard has updated readme"
+        git push
+      shell: bash
