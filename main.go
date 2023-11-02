@@ -79,7 +79,7 @@ func getPackageInfo(packagesName string) []PackageInfo {
 		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
 			fmt.Println(err)
 		}
-		// pubInfo := string(jsonData)
+
 		var pubName, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
 		if value, ok := data["name"].(string); ok {
 			pubName = value
