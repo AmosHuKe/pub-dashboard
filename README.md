@@ -26,7 +26,7 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@0.0.1
+        uses: AmosHuKe/pub-dashboard@v0.0.1
         with:
           filename: "Example.md"
           package_list: "flutter_tilt,bb,cc"
