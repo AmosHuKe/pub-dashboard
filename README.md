@@ -26,7 +26,7 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@main
+        uses: AmosHuKe/pub-dashboard@0.0.1
         with:
           filename: "Example.md"
           package_list: "flutter_tilt,bb,cc"
@@ -47,6 +47,8 @@ jobs:
 
 - ⁉️: Package not found
 - The `Github link` is resolved by the `Homepage`, `Repository`, `IssueTracker` of `pub.dev`
+
+Thanks [Shields](https://github.com/badges/shields).
 
 ## License 📄
 
