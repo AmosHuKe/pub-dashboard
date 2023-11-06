@@ -51,14 +51,14 @@ runs:
       id: go
     
     - name: Update Markdown
+      env:
+        GH_TOKEN: ${{ secrets.PERSON_TOKEN }}
       run: |
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd temp/action/github.com/AmosHuKe/pub-dashboard/repo
+        gh auth setup-git -h github.com
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git commit -a -m "docs(pub-dashboard): pub-dashboard has updated readme"
+        git push
       shell: bash
-    - name: Push changes
-      uses: ad-m/github-push-action@v0.8.0
-      with:
-        github_token: ${{ inputs.github_token }}
