@@ -57,8 +57,10 @@ runs:
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd temp/action/github.com/AmosHuKe/pub-dashboard/repo
         gh auth setup-git -h github.com
+        ls
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add .
         git commit -a -m "docs(pub-dashboard): pub-dashboard has updated readme"
         git push
       shell: bash
