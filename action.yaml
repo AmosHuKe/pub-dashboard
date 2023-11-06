@@ -5,7 +5,14 @@ branding:
   icon: activity
   color: blue
 inputs:
+  github_token:
+    description: 'Github Token with repo permissions'
+    required: true
+  github_repo:
+    description: 'Github repo to be manipulated'
+    required: true
   filename:
+    description: 'Filename in Github repo'
     required: false
     default: README.md
   publisher_list:
@@ -28,26 +35,32 @@ runs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
 
-    - name: Clone action
+    - name: Clone action & repo
       run: |
-        tempPath="temp/github.com/AmosHuKe/pub-dashboard"
-        git clone https://github.com/AmosHuKe/pub-dashboard $tempPath
+        - name: Clone repo
+      run: |
+        tempActionPath="temp/action/github.com/AmosHuKe/pub-dashboard"
+        git clone https://github.com/AmosHuKe/pub-dashboard $tempActionPath
+        git clone ${{ inputs.github_repo }} $tempActionPath/repo
+        cd $tempActionPath
       shell: bash
 
     - name: Setup Go
       uses: actions/setup-go@v4.1.0
       with:
-        go-version-file: temp/github.com/AmosHuKe/pub-dashboard/go.mod
+        go-version-file: temp/action/github.com/AmosHuKe/pub-dashboard/go.mod
         cache: false
       id: go
     
     - name: Update Markdown
       run: |
-        go run temp/github.com/AmosHuKe/pub-dashboard/main.go -filename ${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
-        rm -rf temp
+        go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        cd repo
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add .
-        git commit -m "docs(pub-dashboard): pub-dashboard has updated readme"
-        git push
+        git commit -a -m "docs(pub-dashboard): pub-dashboard has updated readme"
       shell: bash
+    - name: Push changes
+      uses: ad-m/github-push-action@v0.8.0
+      with:
+        github_token: ${{ inputs.github_token }}
