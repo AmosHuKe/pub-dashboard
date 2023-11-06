@@ -37,8 +37,6 @@ runs:
 
     - name: Clone action & repo
       run: |
-        - name: Clone repo
-      run: |
         tempActionPath="temp/action/github.com/AmosHuKe/pub-dashboard"
         git clone https://github.com/AmosHuKe/pub-dashboard $tempActionPath
         git clone ${{ inputs.github_repo }} $tempActionPath/repo
