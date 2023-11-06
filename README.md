@@ -26,11 +26,13 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@v0.1.0
+        uses: AmosHuKe/pub-dashboard@v1
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_repo: "https://github.com/AmosHuKe/pub-dashboard"
           filename: "Example.md"
-          publisherList: "fluttercandies.com,bb,cc"
-          package_list: "flutter_tilt,bb,cc"
+          publisher_list: "fluttercandies.com"
+          package_list: "extended_image,wechat_assets_picker,flutter_tilt"
           sort_field: "published"
           sort_mode: "asc"
 
@@ -39,6 +41,11 @@ jobs:
 
 | Setting | Default | Value | Description |  
 |---------|---------|-------|-------------|
+| github_token <sup>`required`</sup> | - | - | Github Token with repo permissions |
+| github_repo <sup>`required`</sup> | - | - | Github repo to be manipulated |
+| commit_message | docs(pub-dashboard): pub-dashboard has updated readme | - | Commit message |
+| committer_username | github-actions[bot] | - | Committer username |
+| committer_email | 41898282+github-actions[bot]@users.noreply.github.com | - | Committer email |
 | filename | README.md | - | Markdown file <br/> e.g. "README.md" "test/test.md" |
 | publisher_list | - | - | Publisher name (`,` split) <br/> e.g. "aa,bb,cc" |
 | package_list | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
