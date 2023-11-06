@@ -53,7 +53,7 @@ runs:
     - name: Update Markdown
       run: |
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
-        cd repo
+        cd temp/action/github.com/AmosHuKe/pub-dashboard/repo
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git commit -a -m "docs(pub-dashboard): pub-dashboard has updated readme"
