@@ -52,7 +52,7 @@ runs:
     
     - name: Update Markdown
       env:
-        GH_TOKEN: ${{ secrets.PERSON_TOKEN }}
+        GH_TOKEN: ${{ inputs.github_token }}
       run: |
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd temp/action/github.com/AmosHuKe/pub-dashboard/repo
