@@ -70,8 +70,8 @@ runs:
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd repo
         gh auth setup-git -h github.com
-        git config user.name ${{ inputs.committer_username }}
-        git config user.email ${{ inputs.committer_email }}
-        git commit -a -m ${{ inputs.commit_message }}
+        git config user.name "${{ inputs.committer_username }}"
+        git config user.email "${{ inputs.committer_email }}"
+        git commit -a -m "${{ inputs.commit_message }}"
         git push
       shell: bash
