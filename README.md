@@ -26,9 +26,10 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@v0.0.1
+        uses: AmosHuKe/pub-dashboard@v0.1.0
         with:
           filename: "Example.md"
+          publisherList: "fluttercandies.com,bb,cc"
           package_list: "flutter_tilt,bb,cc"
           sort_field: "published"
           sort_mode: "asc"
@@ -39,13 +40,15 @@ jobs:
 | Setting | Default | Value | Description |  
 |---------|---------|-------|-------------|
 | filename | README.md | - | Markdown file <br/> e.g. "README.md" "test/test.md" |
-| package_list <sup>`required`</sup> | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
+| publisher_list | - | - | Publisher name (`,` split) <br/> e.g. "aa,bb,cc" |
+| package_list | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
 | sort_field | name | name, published | Sort field |
 | sort_mode | asc | asc, desc | Sort mode |
 
 ## Tips 💡
 
 - ⁉️: Package not found
+- `publisher_list` and `package_list` are merged
 - The `Github link` is resolved by the `Homepage`, `Repository`, `IssueTracker` of `pub.dev`
 
 Thanks [Shields](https://github.com/badges/shields).

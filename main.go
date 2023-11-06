@@ -27,6 +27,15 @@ type PackageInfo struct {
 	GithubRepo   string
 }
 
+type PublisherInfo struct {
+	Packages []PackageName `json:"packages"`
+	Next     string        `json:"next"`
+}
+
+type PackageName struct {
+	Package string `json:"package"`
+}
+
 type MarkdownTable struct {
 	Name         string
 	Description  string
@@ -41,18 +50,70 @@ type MarkdownTable struct {
 }
 
 func main() {
-	var filename, packageList, sortField, sortMode string
+	var filename, publisherList, packageList, sortField, sortMode string
 	flag.StringVar(&filename, "filename", "README.md", "文件名 如: README.md")
+	flag.StringVar(&publisherList, "publisherList", "", "publisher 如: aa,bb,cc")
 	flag.StringVar(&packageList, "packageList", "", "package 如: aa,bb,cc")
 	flag.StringVar(&sortField, "sortField", "name", "name | published")
 	flag.StringVar(&sortMode, "sortMode", "asc", "asc | desc")
 	flag.Parse()
 
-	packageInfoList := getPackageInfo(packageList)
+	var packageAllList string
+	publisherPackageList := getPublisherPackages(publisherList)
+	packageAllList = publisherPackageList + "," + packageList
+	packageInfoList := getPackageInfo(packageAllList)
 	sortPackageInfo(packageInfoList, sortField, sortMode)
 	findGithubInfo(packageInfoList)
 	markdownTable := assembleMarkdownTable(packageInfoList, sortField, sortMode)
 	updateMarkdownTable(filename, markdownTable)
+}
+
+// 通过 Publisher 获取所有 Package 名称
+// [publisherName] publisher 列表(逗号,分割)
+// Return 与 packageList 相同的 package 名称列表(逗号,分割)
+func getPublisherPackages(publisherName string) string {
+	if publisherName == "" {
+		return ""
+	}
+	publisherList := removeDuplicates(strings.Split(publisherName, ","))
+	fmt.Println("🌏", publisherList)
+	packageNameList := []string{}
+	for _, value := range publisherList {
+		if value == "" {
+			continue
+		}
+		publisherName := strings.TrimSpace(value)
+
+		// 查找每一页
+		pageIndex := 1
+		for pageIndex != 0 {
+			fmt.Println("🌏 Publisher: " + publisherName + ", Page: " + strconv.Itoa(pageIndex))
+			res, err := http.Get("https://pub.dev/api/search?q=publisher:" + publisherName + "&page=" + strconv.Itoa(pageIndex))
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer res.Body.Close()
+			jsonData, getErr := io.ReadAll(res.Body)
+			if getErr != nil {
+				fmt.Println(getErr)
+			}
+			data := PublisherInfo{}
+			if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+				fmt.Println(err)
+			}
+			if len(data.Packages) > 0 {
+				for _, packageName := range data.Packages {
+					if packageName.Package != "" {
+						packageNameList = append(packageNameList, packageName.Package)
+					}
+				}
+				pageIndex++
+			} else {
+				pageIndex = 0
+			}
+		}
+	}
+	return strings.Join(packageNameList, ",")
 }
 
 // 获取 Package 信息
@@ -81,23 +142,27 @@ func getPackageInfo(packagesName string) []PackageInfo {
 		}
 
 		var pubName, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
-		if value, ok := data["name"].(string); ok {
-			pubName = value
-		}
-		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["description"].(string); ok {
-			pubDescription = value
-		}
-		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["homepage"].(string); ok {
-			pubHomepage = value
-		}
-		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["repository"].(string); ok {
-			pubRepository = value
-		}
-		if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["issue_tracker"].(string); ok {
-			pubIssueTracker = value
-		}
-		if value, ok := data["latest"].(map[string]interface{})["published"].(string); ok {
-			pubPublished = value
+		if value, ok := data["code"].(string); !ok {
+			if value == "" {
+				if value, ok := data["name"].(string); ok {
+					pubName = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["description"].(string); ok {
+					pubDescription = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["homepage"].(string); ok {
+					pubHomepage = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["repository"].(string); ok {
+					pubRepository = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["issue_tracker"].(string); ok {
+					pubIssueTracker = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["published"].(string); ok {
+					pubPublished = value
+				}
+			}
 		}
 		if pubName != "" {
 			// 可获取信息
@@ -113,6 +178,7 @@ func getPackageInfo(packagesName string) []PackageInfo {
 					Published:    pubPublished,
 				},
 			)
+			fmt.Println("📄 " + packageName + ", Code: 1")
 		} else {
 			// 无法获取信息
 			packageInfoList = append(
@@ -122,6 +188,7 @@ func getPackageInfo(packagesName string) []PackageInfo {
 					Name: packageName,
 				},
 			)
+			fmt.Println("📄 " + packageName + ", Code: 0")
 		}
 	}
 	return packageInfoList

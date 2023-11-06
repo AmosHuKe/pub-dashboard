@@ -8,9 +8,12 @@ inputs:
   filename:
     required: false
     default: README.md
+  publisher_list:
+    description: 'e.g fluttercandies.com,bb,cc'
+    required: false
   package_list:
-    description: 'e.g aa,flutter_tilt,cc'
-    required: true
+    description: 'e.g flutter_tilt,bb,cc'
+    required: false
   sort_field:
     description: 'name | published'
     required: false
@@ -40,7 +43,7 @@ runs:
     
     - name: Update Markdown
       run: |
-        go run temp/github.com/AmosHuKe/pub-dashboard/main.go -filename ${{ inputs.filename }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        go run temp/github.com/AmosHuKe/pub-dashboard/main.go -filename ${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         rm -rf temp
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
