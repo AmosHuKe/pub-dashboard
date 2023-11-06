@@ -56,7 +56,7 @@ runs:
       run: |
         cd temp/action/github.com/AmosHuKe/pub-dashboard
         go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
-        cd temp/action/github.com/AmosHuKe/pub-dashboard/repo
+        cd repo
         gh auth setup-git -h github.com
         ls
         git config user.name "github-actions[bot]"
