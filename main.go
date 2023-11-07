@@ -65,7 +65,11 @@ func main() {
 	sortPackageInfo(packageInfoList, sortField, sortMode)
 	findGithubInfo(packageInfoList)
 	markdownTable := assembleMarkdownTable(packageInfoList, sortField, sortMode)
+
+	// 更新表格
 	updateMarkdownTable(filename, markdownTable)
+	// 更新总数
+	updateMarkdownPackageTotal(filename, len(packageInfoList))
 }
 
 // 通过 Publisher 获取所有 Package 名称
@@ -351,26 +355,28 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 // 更新 Markdown 表格
 // [filename]	更新的文件
 // [markdown]	更新内容
+//
+// <!-- md:PubDashboard start --><!-- md:PubDashboard end -->
 func updateMarkdownTable(filename string, markdown string) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("❌ updateMarkdownTable: Error reade a file: %w", err)
 	}
 
-	start := []byte("<!-- md:PubDashboard start -->")
-	before := md[:bytes.Index(md, start)+len(start)]
-	end := []byte("<!-- md:PubDashboard end -->")
-	after := md[bytes.Index(md, end):]
+	start := "<!-- md:PubDashboard start -->"
+	end := "<!-- md:PubDashboard end -->"
+	newMdText := bytes.NewBuffer(nil)
+	newMdText.WriteString(start)
+	newMdText.WriteString(" \n")
+	newMdText.WriteString(markdown)
+	newMdText.WriteString(" \n")
+	newMdText.WriteString("Updated on " + time.Now().Format(time.RFC3339) + " by [Action](https://github.com/AmosHuKe/pub-dashboard). \n")
+	newMdText.WriteString(end)
 
-	newMd := bytes.NewBuffer(nil)
-	newMd.Write(before)
-	newMd.WriteString(" \n")
-	newMd.WriteString(markdown)
-	newMd.WriteString(" \n")
-	newMd.WriteString("Updated on " + time.Now().Format(time.RFC3339) + " by [Action](https://github.com/AmosHuKe/pub-dashboard). \n")
-	newMd.Write(after)
+	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
+	newMd := reg.ReplaceAll(md, newMdText.Bytes())
 
-	err = os.WriteFile(filename, newMd.Bytes(), os.ModeAppend)
+	err = os.WriteFile(filename, newMd, os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf("❌ updateMarkdownTable: Error writing a file: %w", err)
 	}
@@ -399,4 +405,33 @@ func removeDuplicates(arr []string) []string {
 		uniqueArr = append(uniqueArr, k)
 	}
 	return uniqueArr
+}
+
+// 更新 Markdown Package 总数计数
+// [filename]	更新的文件
+// [total]		总数
+//
+// <!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
+func updateMarkdownPackageTotal(filename string, total int) error {
+	md, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("❌ updateMarkdownPackageTotal: Error reade a file: %w", err)
+	}
+
+	start := "<!-- md:PubDashboard-total start -->"
+	end := "<!-- md:PubDashboard-total end -->"
+	newMdText := bytes.NewBuffer(nil)
+	newMdText.WriteString(start)
+	newMdText.WriteString(strconv.Itoa(total))
+	newMdText.WriteString(end)
+
+	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
+	newMd := reg.ReplaceAll(md, newMdText.Bytes())
+
+	err = os.WriteFile(filename, newMd, os.ModeAppend)
+	if err != nil {
+		return fmt.Errorf("❌ updateMarkdownPackageTotal: Error writing a file: %w", err)
+	}
+	fmt.Println("✅ updateMarkdownPackageTotal: Success")
+	return nil
 }

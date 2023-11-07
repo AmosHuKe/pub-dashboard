@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+### New features
+
+- Add `<!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->`.
+- Improved match multiple keywords.
+
 ## 1.0.0
 
 ### New features

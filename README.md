@@ -6,9 +6,16 @@ Example: [Example.md](Example.md)
 
 1.Add comments to the place where you want to update in the markdown file.
 
+* Table
+
 ```
-<!-- md:PubDashboard start -->
-<!-- md:PubDashboard end -->
+<!-- md:PubDashboard start --><!-- md:PubDashboard end -->
+```
+
+* Package total
+
+```
+<!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
 ```
 
 2.Enable read/write permissions
@@ -26,7 +33,7 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@v1.0.0
+        uses: AmosHuKe/pub-dashboard@v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           github_repo: "https://github.com/AmosHuKe/pub-dashboard"
