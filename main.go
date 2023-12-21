@@ -377,7 +377,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// 已获取信息
 			// Base
 			name = "[" + value.Name + "](https://pub.dev/packages/" + value.Name + ")"
-			version = "[ v" + value.Version + "](https://pub.dev/packages/" + value.Name + ")"
+			version = "v" + value.Version
 			if len(value.ScoreInfo.TagsPlatform) > 0 {
 				platform = "<strong>Platform:</strong> " + strings.Join(value.ScoreInfo.TagsPlatform, ", ")
 			} else {
@@ -423,7 +423,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 		"|--------------------|------------------------|------------------------------|-------------------|--------------------------| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
-			"| " + value.Name + " <sup><strong> " + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> " + "<sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
+			"| " + value.Name + " <sup><strong>" + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> " + "<sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
 			" | " + value.GithubStars + " <br/> " + value.PubLikes +
 			" | " + value.Points + " <br/> " + value.Popularity +
 			" | " + value.Issues +
