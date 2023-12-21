@@ -15,9 +15,26 @@ import (
 	"time"
 )
 
+// 主 MarkdownTable
+type MarkdownTable struct {
+	Name         string
+	Version      string
+	Description  string
+	Platform     string
+	Published    string
+	GithubStars  string
+	PubLikes     string
+	Points       string
+	Popularity   string
+	Issues       string
+	PullRequests string
+}
+
+// 主 Package 信息
 type PackageInfo struct {
 	Code         int // 0: error 1：success
 	Name         string
+	Version      string
 	Description  string
 	Homepage     string
 	Repository   string
@@ -25,6 +42,17 @@ type PackageInfo struct {
 	Published    string
 	GithubUser   string
 	GithubRepo   string
+	ScoreInfo    PackageScoreInfo
+}
+
+type PackageScoreInfo struct {
+	GrantedPoints   float64  `json:"grantedPoints"`
+	MaxPoints       float64  `json:"maxPoints"`
+	LikeCount       float64  `json:"likeCount"`
+	PopularityScore float64  `json:"popularityScore"`
+	Tags            []string `json:"tags"`
+	LastUpdated     string   `json:"lastUpdated"`
+	TagsPlatform    []string
 }
 
 type PublisherInfo struct {
@@ -34,19 +62,6 @@ type PublisherInfo struct {
 
 type PackageName struct {
 	Package string `json:"package"`
-}
-
-type MarkdownTable struct {
-	Name         string
-	Description  string
-	Published    string
-	GithubStars  string
-	PubLikes     string
-	Version      string
-	Points       string
-	Popularity   string
-	Issues       string
-	PullRequests string
 }
 
 func main() {
@@ -124,12 +139,13 @@ func getPublisherPackages(publisherName string) string {
 // [packagesName] package 名称列表(逗号,分割)
 func getPackageInfo(packagesName string) []PackageInfo {
 	packageList := removeDuplicates(strings.Split(packagesName, ","))
-	fmt.Println("📄", packageList)
+	fmt.Println("📦", packageList)
 	packageInfoList := []PackageInfo{}
 	for _, value := range packageList {
 		if value == "" {
 			continue
 		}
+		fmt.Println("📦🔥 " + value)
 		packageName := strings.TrimSpace(value)
 		res, err := http.Get("https://pub.dev/api/packages/" + packageName)
 		if err != nil {
@@ -145,11 +161,14 @@ func getPackageInfo(packagesName string) []PackageInfo {
 			fmt.Println(err)
 		}
 
-		var pubName, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
-		if value, ok := data["code"].(string); !ok {
-			if value == "" {
+		var pubName, pubVersion, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
+		if value, ok := data["error"].(map[string]interface{}); !ok {
+			if len(value) <= 0 {
 				if value, ok := data["name"].(string); ok {
 					pubName = value
+				}
+				if value, ok := data["latest"].(map[string]interface{})["version"].(string); ok {
+					pubVersion = value
 				}
 				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["description"].(string); ok {
 					pubDescription = value
@@ -175,14 +194,16 @@ func getPackageInfo(packagesName string) []PackageInfo {
 				PackageInfo{
 					Code:         1,
 					Name:         pubName,
+					Version:      pubVersion,
 					Description:  pubDescription,
 					Homepage:     pubHomepage,
 					Repository:   pubRepository,
 					IssueTracker: pubIssueTracker,
 					Published:    pubPublished,
+					ScoreInfo:    getPackageScoreInfo(pubName),
 				},
 			)
-			fmt.Println("📄 " + packageName + ", Code: 1")
+			fmt.Println("📦✅ " + packageName + ", Code: 1")
 		} else {
 			// 无法获取信息
 			packageInfoList = append(
@@ -192,52 +213,105 @@ func getPackageInfo(packagesName string) []PackageInfo {
 					Name: packageName,
 				},
 			)
-			fmt.Println("📄 " + packageName + ", Code: 0")
+			fmt.Println("📦❌ " + packageName + ", Code: 0")
 		}
 	}
 	return packageInfoList
 }
 
+// 获取 Package score 信息
+// [packageName] 单个 package 名称
+func getPackageScoreInfo(packageName string) PackageScoreInfo {
+	res, err := http.Get("https://pub.dev/api/packages/" + packageName + "/score")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer res.Body.Close()
+	jsonData, getErr := io.ReadAll(res.Body)
+	if getErr != nil {
+		fmt.Println(getErr)
+	}
+	var data PackageScoreInfo
+	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+		fmt.Println(err)
+	}
+
+	// 获取 Tags 相关内容
+	var tagsPlatform []string
+	for _, value := range data.Tags {
+		tag := strings.Split(value, ":")
+		tagName := tag[0]
+		tagValue := tag[1]
+		// TagsPlatform
+		if tagName == "platform" {
+			tagsPlatform = append(tagsPlatform, tagValue)
+		}
+	}
+	data.TagsPlatform = tagsPlatform
+	return data
+
+}
+
 // 排序
 // [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published
+// [sortField] 				排序字段 可选：name(default) | published | pubLikes
 // [sortMode] 				排序方式 可选：asc(default) | desc
 func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode string) {
 	switch sortField {
 	case "name":
-		// 按照名称排序
+		// 按照 pub 名称排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].Name
+			jData := packageInfoList[j].Name
 			switch sortMode {
 			case "asc":
-				return packageInfoList[i].Name < packageInfoList[j].Name
+				return iData < jData
 			case "desc":
-				return packageInfoList[i].Name > packageInfoList[j].Name
+				return iData > jData
 			default:
-				return packageInfoList[i].Name < packageInfoList[j].Name
+				return iData < jData
 			}
 		})
 	case "published":
-		// 按最新发布时间排序
+		// 按 pub 最新发布时间排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].Published
+			jData := packageInfoList[j].Published
 			switch sortMode {
 			case "asc":
-				return packageInfoList[i].Published > packageInfoList[j].Published
+				return iData > jData
 			case "desc":
-				return packageInfoList[i].Published < packageInfoList[j].Published
+				return iData < jData
 			default:
-				return packageInfoList[i].Published > packageInfoList[j].Published
+				return iData > jData
+			}
+		})
+	case "pubLikes":
+		// 按 pub 最新发布时间排序
+		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].ScoreInfo.LikeCount
+			jData := packageInfoList[j].ScoreInfo.LikeCount
+			switch sortMode {
+			case "asc":
+				return iData < jData
+			case "desc":
+				return iData > jData
+			default:
+				return iData < jData
 			}
 		})
 	default:
-		// 按照名称排序
+		// 按照 pub 名称排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].Name
+			jData := packageInfoList[j].Name
 			switch sortMode {
 			case "asc":
-				return packageInfoList[i].Name < packageInfoList[j].Name
+				return iData < jData
 			case "desc":
-				return packageInfoList[i].Name > packageInfoList[j].Name
+				return iData > jData
 			default:
-				return packageInfoList[i].Name < packageInfoList[j].Name
+				return iData < jData
 			}
 		})
 	}
@@ -294,7 +368,7 @@ func formatGithubInfo(value string) (string, string) {
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sortMode string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
-		var name, githubStars, pubLikes, version, points, popularity, issues, pullRequests string
+		var name, version, platform, published, githubStars, pubLikes, points, popularity, issues, pullRequests string
 		switch value.Code {
 		case 0:
 			// 无法获取信息
@@ -303,9 +377,15 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// 已获取信息
 			// Base
 			name = "[" + value.Name + "](https://pub.dev/packages/" + value.Name + ")"
+			version = "[ v" + value.Version + "](https://pub.dev/packages/" + value.Name + ")"
+			if len(value.ScoreInfo.TagsPlatform) > 0 {
+				platform = "<strong>Platform:</strong> " + strings.Join(value.ScoreInfo.TagsPlatform, ", ")
+			} else {
+				platform = "-"
+			}
+			published = "<strong>Published:</strong> " + value.Published
 			githubStars = ""
 			pubLikes = "[![Pub likes](https://img.shields.io/pub/likes/" + value.Name + "?style=social&logo=flutter&logoColor=168AFD&label=)](https://pub.dev/packages/" + value.Name + ")"
-			version = "[![Pub package](https://img.shields.io/pub/v/" + value.Name + "?label=)](https://pub.dev/packages/" + value.Name + ")"
 			points = "[![Pub points](https://img.shields.io/pub/points/" + value.Name + "?label=)](https://pub.dev/packages/" + value.Name + "/score)"
 			popularity = "[![popularity](https://img.shields.io/pub/popularity/" + value.Name + "?label=)](https://pub.dev/packages/" + value.Name + "/score)"
 			issues = "-"
@@ -323,11 +403,12 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			markdownTableList,
 			MarkdownTable{
 				Name:         name,
+				Version:      version,
 				Description:  value.Description,
-				Published:    value.Published,
+				Platform:     platform,
+				Published:    published,
 				GithubStars:  githubStars,
 				PubLikes:     pubLikes,
-				Version:      version,
 				Points:       points,
 				Popularity:   popularity,
 				Issues:       issues,
@@ -342,7 +423,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 		"|--------------------|------------------------|------------------------------|-------------------|--------------------------| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
-			"| " + value.Name + " " + value.Version + " <br/> <sub>" + formatString(value.Description) + "</sub> <br/> " + "<sub>Published: " + value.Published + "</sub>" +
+			"| " + value.Name + " <sup><strong> " + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> " + "<sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
 			" | " + value.GithubStars + " <br/> " + value.PubLikes +
 			" | " + value.Points + " <br/> " + value.Popularity +
 			" | " + value.Issues +
@@ -360,7 +441,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 func updateMarkdownTable(filename string, markdown string) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("❌ updateMarkdownTable: Error reade a file: %w", err)
+		return fmt.Errorf("📄❌ updateMarkdownTable: Error reade a file: %w", err)
 	}
 
 	start := "<!-- md:PubDashboard start -->"
@@ -378,9 +459,38 @@ func updateMarkdownTable(filename string, markdown string) error {
 
 	err = os.WriteFile(filename, newMd, os.ModeAppend)
 	if err != nil {
-		return fmt.Errorf("❌ updateMarkdownTable: Error writing a file: %w", err)
+		return fmt.Errorf("📄❌ updateMarkdownTable: Error writing a file: %w", err)
 	}
-	fmt.Println("✅ updateMarkdownTable: Success")
+	fmt.Println("📄✅ updateMarkdownTable: Success")
+	return nil
+}
+
+// 更新 Markdown Package 总数计数
+// [filename]	更新的文件
+// [total]		总数
+//
+// <!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
+func updateMarkdownPackageTotal(filename string, total int) error {
+	md, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("📄❌ updateMarkdownPackageTotal: Error reade a file: %w", err)
+	}
+
+	start := "<!-- md:PubDashboard-total start -->"
+	end := "<!-- md:PubDashboard-total end -->"
+	newMdText := bytes.NewBuffer(nil)
+	newMdText.WriteString(start)
+	newMdText.WriteString(strconv.Itoa(total))
+	newMdText.WriteString(end)
+
+	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
+	newMd := reg.ReplaceAll(md, newMdText.Bytes())
+
+	err = os.WriteFile(filename, newMd, os.ModeAppend)
+	if err != nil {
+		return fmt.Errorf("📄❌ updateMarkdownPackageTotal: Error writing a file: %w", err)
+	}
+	fmt.Println("📄✅ updateMarkdownPackageTotal: Success")
 	return nil
 }
 
@@ -405,33 +515,4 @@ func removeDuplicates(arr []string) []string {
 		uniqueArr = append(uniqueArr, k)
 	}
 	return uniqueArr
-}
-
-// 更新 Markdown Package 总数计数
-// [filename]	更新的文件
-// [total]		总数
-//
-// <!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
-func updateMarkdownPackageTotal(filename string, total int) error {
-	md, err := os.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("❌ updateMarkdownPackageTotal: Error reade a file: %w", err)
-	}
-
-	start := "<!-- md:PubDashboard-total start -->"
-	end := "<!-- md:PubDashboard-total end -->"
-	newMdText := bytes.NewBuffer(nil)
-	newMdText.WriteString(start)
-	newMdText.WriteString(strconv.Itoa(total))
-	newMdText.WriteString(end)
-
-	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
-	newMd := reg.ReplaceAll(md, newMdText.Bytes())
-
-	err = os.WriteFile(filename, newMd, os.ModeAppend)
-	if err != nil {
-		return fmt.Errorf("❌ updateMarkdownPackageTotal: Error writing a file: %w", err)
-	}
-	fmt.Println("✅ updateMarkdownPackageTotal: Success")
-	return nil
 }

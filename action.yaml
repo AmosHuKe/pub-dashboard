@@ -34,7 +34,7 @@ inputs:
     description: 'e.g flutter_tilt,bb,cc'
     required: false
   sort_field:
-    description: 'name | published'
+    description: 'name | published | pubLikes'
     required: false
     default: name
   sort_mode:

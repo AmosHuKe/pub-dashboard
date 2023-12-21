@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2
+
+### New features
+
+- Show platform information.
+- Added a new sort field - `pubLikes`, which will sort the likes of pub.
+
+### Improvements
+
+- Improve version display format.
+
 ## 1.0.1
 
 ### New features
