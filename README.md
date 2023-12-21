@@ -33,7 +33,7 @@ jobs:
     name: pub-dashboard
     steps:
       - name: run pub-dashboard
-        uses: AmosHuKe/pub-dashboard@v1.0.1
+        uses: AmosHuKe/pub-dashboard@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           github_repo: "https://github.com/AmosHuKe/pub-dashboard"
