@@ -20,7 +20,13 @@ Example: [Example.md](Example.md)
 
 2.Enable read/write permissions
 
-> Settings -> Actions -> General -> Workflow permissions -> Read and write permissions 
+(recommend) If you use a `Personal access token`:
+> e.g. github_token: ${{ secrets.xxxxxx }} (ghp_xxxxx)
+> Create a token (enable repo permissions) https://github.com/settings/tokens/
+
+If you use the current repo's token:
+> e.g. github_token: ${{ secrets.GITHUB_TOKEN }}  
+> Current repo's settings: Settings -> Actions -> General -> Workflow permissions -> Read and write permissions 
 
 3.Edit the settings in `.github/workflows/pub-dashboard.yml`
 
@@ -35,7 +41,7 @@ jobs:
       - name: run pub-dashboard
         uses: AmosHuKe/pub-dashboard@main
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ Personal access token }} or ${{ secrets.GITHUB_TOKEN }}
           github_repo: "https://github.com/AmosHuKe/pub-dashboard"
           filename: "Example.md"
           publisher_list: "fluttercandies.com"
