@@ -20,6 +20,7 @@ type MarkdownTable struct {
 	Name         string
 	Version      string
 	Description  string
+	LicenseName  string
 	Platform     string
 	Published    string
 	GithubStars  string
@@ -42,7 +43,15 @@ type PackageInfo struct {
 	Published    string
 	GithubUser   string
 	GithubRepo   string
+	GithubInfo   GithubInfo
 	ScoreInfo    PackageScoreInfo
+}
+
+type GithubInfo struct {
+	StargazersCount float64
+	ForksCount      float64
+	OpenIssuesCount float64
+	LicenseName     string
 }
 
 type PackageScoreInfo struct {
@@ -65,20 +74,20 @@ type PackageName struct {
 }
 
 func main() {
-	var filename, publisherList, packageList, sortField, sortMode string
+	var githubToken, filename, publisherList, packageList, sortField, sortMode string
+	flag.StringVar(&githubToken, "githubToken", "Github Token with repo permissions", "Github Token with repo permissions")
 	flag.StringVar(&filename, "filename", "README.md", "文件名 如: README.md")
 	flag.StringVar(&publisherList, "publisherList", "", "publisher 如: aa,bb,cc")
 	flag.StringVar(&packageList, "packageList", "", "package 如: aa,bb,cc")
-	flag.StringVar(&sortField, "sortField", "name", "name | published")
+	flag.StringVar(&sortField, "sortField", "name", "name | published | pubLikes | githubStars")
 	flag.StringVar(&sortMode, "sortMode", "asc", "asc | desc")
 	flag.Parse()
 
 	var packageAllList string
 	publisherPackageList := getPublisherPackages(publisherList)
 	packageAllList = publisherPackageList + "," + packageList
-	packageInfoList := getPackageInfo(packageAllList)
+	packageInfoList := getPackageInfo(githubToken, packageAllList)
 	sortPackageInfo(packageInfoList, sortField, sortMode)
-	findGithubInfo(packageInfoList)
 	markdownTable := assembleMarkdownTable(packageInfoList, sortField, sortMode)
 
 	// 更新表格
@@ -136,8 +145,9 @@ func getPublisherPackages(publisherName string) string {
 }
 
 // 获取 Package 信息
+// [githubToken] Github Token
 // [packagesName] package 名称列表(逗号,分割)
-func getPackageInfo(packagesName string) []PackageInfo {
+func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
 	packageList := removeDuplicates(strings.Split(packagesName, ","))
 	fmt.Println("📦", packageList)
 	packageInfoList := []PackageInfo{}
@@ -189,20 +199,19 @@ func getPackageInfo(packagesName string) []PackageInfo {
 		}
 		if pubName != "" {
 			// 可获取信息
-			packageInfoList = append(
-				packageInfoList,
-				PackageInfo{
-					Code:         1,
-					Name:         pubName,
-					Version:      pubVersion,
-					Description:  pubDescription,
-					Homepage:     pubHomepage,
-					Repository:   pubRepository,
-					IssueTracker: pubIssueTracker,
-					Published:    pubPublished,
-					ScoreInfo:    getPackageScoreInfo(pubName),
-				},
-			)
+			packageInfo := PackageInfo{
+				Code:         1,
+				Name:         pubName,
+				Version:      pubVersion,
+				Description:  pubDescription,
+				Homepage:     pubHomepage,
+				Repository:   pubRepository,
+				IssueTracker: pubIssueTracker,
+				Published:    pubPublished,
+				ScoreInfo:    getPackageScoreInfo(pubName),
+			}
+			getGithubInfo(githubToken, &packageInfo)
+			packageInfoList = append(packageInfoList, packageInfo)
 			fmt.Println("📦✅ " + packageName + ", Code: 1")
 		} else {
 			// 无法获取信息
@@ -252,9 +261,116 @@ func getPackageScoreInfo(packageName string) PackageScoreInfo {
 
 }
 
+// 获取 Github 信息
+// [githubToken] Github Token
+// [packageInfo] 当前 package 信息
+func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
+	if packageInfo.Code == 0 {
+		return
+	}
+	finish := false
+	var user, repo string
+	user, repo = formatGithubInfo(packageInfo.Repository)
+	if repo != "" && !finish {
+		packageInfo.GithubUser = user
+		packageInfo.GithubRepo = repo
+		finish = true
+	}
+	user, repo = formatGithubInfo(packageInfo.IssueTracker)
+	if repo != "" && !finish {
+		packageInfo.GithubUser = user
+		packageInfo.GithubRepo = repo
+		finish = true
+	}
+	user, repo = formatGithubInfo(packageInfo.Homepage)
+	if repo != "" && !finish {
+		packageInfo.GithubUser = user
+		packageInfo.GithubRepo = repo
+		finish = true
+	}
+	// 获取 Github 相关信息
+	if packageInfo.GithubUser != "" && packageInfo.GithubRepo != "" {
+		packageInfo.GithubInfo = getGithubBaseInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
+	}
+
+}
+
+// 获取 Github Stars
+// [githubToken] Github Token
+// [user] 用户
+// [repo] 仓库
+func getGithubBaseInfo(githubToken string, user string, repo string) GithubInfo {
+	client := &http.Client{}
+	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo, strings.NewReader(""))
+	if err != nil {
+		fmt.Println(err)
+	}
+	resp.Header.Set("Authorization", "bearer "+githubToken)
+	resp.Header.Set("Accept", "application/vnd.github+json")
+	resp.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	res, err := client.Do(resp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer res.Body.Close()
+	jsonData, getErr := io.ReadAll(res.Body)
+	if getErr != nil {
+		fmt.Println(getErr)
+	}
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+		fmt.Println(err)
+	}
+
+	var stargazersCount, forksCount, openIssuesCount float64
+	var licenseName string
+	if value, ok := data["message"].(string); !ok {
+		if value, ok := data["stargazers_count"].(float64); ok {
+			stargazersCount = value
+		}
+		if value, ok := data["forks_count"].(float64); ok {
+			forksCount = value
+		}
+		if value, ok := data["open_issues_count"].(float64); ok {
+			openIssuesCount = value
+		}
+		if value, ok := data["license"].(string); !ok {
+			if value != "null" {
+				if value, ok := data["license"].(map[string]interface{})["name"].(string); ok {
+					licenseName = value
+				}
+			}
+		}
+
+	} else {
+		fmt.Println("📦⚠️ Github: " + value)
+	}
+	return GithubInfo{
+		StargazersCount: stargazersCount,
+		ForksCount:      forksCount,
+		OpenIssuesCount: openIssuesCount,
+		LicenseName:     licenseName,
+	}
+}
+
+// 格式化 Github 信息
+// Return (githubUser, githubRepo)
+func formatGithubInfo(value string) (string, string) {
+	var githubUser, githubRepo string
+	result := regexp.MustCompile(`(?:github.com/).*`).FindAllString(value, -1)
+	if result != nil {
+		info := strings.Split(result[0], "/")
+		if len(info) >= 3 {
+			githubUser = info[1]
+			githubRepo = strings.ReplaceAll(info[2], ".git", "")
+		}
+	}
+	return githubUser, githubRepo
+}
+
 // 排序
 // [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published | pubLikes
+// [sortField] 				排序字段 可选：name(default) | published | pubLikes | githubStars
 // [sortMode] 				排序方式 可选：asc(default) | desc
 func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode string) {
 	switch sortField {
@@ -287,10 +403,24 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 			}
 		})
 	case "pubLikes":
-		// 按 pub 最新发布时间排序
+		// 按 pub likes 排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
 			iData := packageInfoList[i].ScoreInfo.LikeCount
 			jData := packageInfoList[j].ScoreInfo.LikeCount
+			switch sortMode {
+			case "asc":
+				return iData < jData
+			case "desc":
+				return iData > jData
+			default:
+				return iData < jData
+			}
+		})
+	case "githubStars":
+		// 按 github stars 排序
+		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].GithubInfo.StargazersCount
+			jData := packageInfoList[j].GithubInfo.StargazersCount
 			switch sortMode {
 			case "asc":
 				return iData < jData
@@ -317,50 +447,6 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 	}
 }
 
-// 寻找 Github 信息
-// [packageInfoList] 	信息列表
-func findGithubInfo(packageInfoList []PackageInfo) {
-	for key, value := range packageInfoList {
-		if value.Code == 0 {
-			continue
-		}
-		var user, repo string
-		user, repo = formatGithubInfo(value.Repository)
-		if user != "" {
-			packageInfoList[key].GithubUser = user
-			packageInfoList[key].GithubRepo = repo
-			continue
-		}
-		user, repo = formatGithubInfo(value.IssueTracker)
-		if user != "" {
-			packageInfoList[key].GithubUser = user
-			packageInfoList[key].GithubRepo = repo
-			continue
-		}
-		user, repo = formatGithubInfo(value.Homepage)
-		if user != "" {
-			packageInfoList[key].GithubUser = user
-			packageInfoList[key].GithubRepo = repo
-			continue
-		}
-	}
-}
-
-// 格式化 Github 信息
-// Return (githubUser, githubRepo)
-func formatGithubInfo(value string) (string, string) {
-	var githubUser, githubRepo string
-	result := regexp.MustCompile(`(?:github.com/).*`).FindAllString(value, -1)
-	if result != nil {
-		info := strings.Split(result[0], "/")
-		if len(info) >= 3 {
-			githubUser = info[1]
-			githubRepo = strings.ReplaceAll(info[2], ".git", "")
-		}
-	}
-	return githubUser, githubRepo
-}
-
 // 组装表格内容
 // [packageInfoList] 	信息列表
 // [sortField] 				排序字段 可选：name(default) | published
@@ -368,7 +454,9 @@ func formatGithubInfo(value string) (string, string) {
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sortMode string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
-		var name, version, platform, published, githubStars, pubLikes, points, popularity, issues, pullRequests string
+		var name, version, published, githubStars, pubLikes, points, popularity, issues, pullRequests string
+		licenseName := "<strong>License:</strong> -"
+		platform := "<strong>Platform:</strong> -"
 		switch value.Code {
 		case 0:
 			// 无法获取信息
@@ -380,8 +468,6 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			version = "v" + value.Version
 			if len(value.ScoreInfo.TagsPlatform) > 0 {
 				platform = "<strong>Platform:</strong> " + strings.Join(value.ScoreInfo.TagsPlatform, ", ")
-			} else {
-				platform = "-"
 			}
 			published = "<strong>Published:</strong> " + value.Published
 			githubStars = ""
@@ -394,6 +480,9 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// Github
 			if value.GithubUser != "" && value.GithubRepo != "" {
 				githubURL := value.GithubUser + "/" + value.GithubRepo
+				if value.GithubInfo.LicenseName != "" {
+					licenseName = "<strong>License:</strong> " + value.GithubInfo.LicenseName
+				}
 				githubStars = "[![GitHub stars](https://img.shields.io/github/stars/" + githubURL + "?style=social&logo=github&logoColor=1F2328&label=)](https://github.com/" + githubURL + ")"
 				issues = "[![GitHub issues](https://img.shields.io/github/issues/" + githubURL + "?label=)](https://github.com/" + githubURL + "/issues)"
 				pullRequests = "[![GitHub pull requests](https://img.shields.io/github/issues-pr/" + githubURL + "?label=)](https://github.com/" + githubURL + "/pulls)"
@@ -405,6 +494,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 				Name:         name,
 				Version:      version,
 				Description:  value.Description,
+				LicenseName:  licenseName,
 				Platform:     platform,
 				Published:    published,
 				GithubStars:  githubStars,
@@ -423,7 +513,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 		"|--------------------|------------------------|------------------------------|-------------------|--------------------------| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
-			"| " + value.Name + " <sup><strong>" + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> " + "<sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
+			"| " + value.Name + " <sup><strong>" + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> <sub>" + value.LicenseName + "</sub> <br/> <sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
 			" | " + value.GithubStars + " <br/> " + value.PubLikes +
 			" | " + value.Points + " <br/> " + value.Popularity +
 			" | " + value.Issues +

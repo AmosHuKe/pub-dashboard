@@ -56,7 +56,7 @@ jobs:
 | filename | README.md | - | Markdown file <br/> e.g. "README.md" "test/test.md" |
 | publisher_list | - | - | Publisher name (`,` split) <br/> e.g. "aa,bb,cc" |
 | package_list | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
-| sort_field | name | name, published, pubLikes | Sort field |
+| sort_field | name | name, published, pubLikes, githubStars | Sort field |
 | sort_mode | asc | asc, desc | Sort mode |
 
 ## Tips 💡

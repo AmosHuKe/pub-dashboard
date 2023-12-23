@@ -34,7 +34,7 @@ inputs:
     description: 'e.g flutter_tilt,bb,cc'
     required: false
   sort_field:
-    description: 'name | published | pubLikes'
+    description: 'name | published | pubLikes | githubStars'
     required: false
     default: name
   sort_mode:
@@ -67,7 +67,7 @@ runs:
         GH_TOKEN: ${{ inputs.github_token }}
       run: |
         cd temp/action/github.com/AmosHuKe/pub-dashboard
-        go run main.go -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        go run main.go -githubToken ${{ inputs.github_token }} -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
         cd repo
         gh auth setup-git -h github.com
         git config user.name "${{ inputs.committer_username }}"

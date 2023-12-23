@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+### New features
+
+- Show license information.
+- Added a new sort field - `githubStars`.
+
 ## 1.0.2
 
 ### New features
