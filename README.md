@@ -21,7 +21,7 @@ Example: [Example.md](Example.md)
 2.Enable read/write permissions
 
 (recommend) If you use a `Personal access token`:
-> e.g. github_token: ${{ secrets.xxxxxx }} (ghp_xxxxx)
+> e.g. github_token: ${{ secrets.xxxxxx }} (ghp_xxxxx)  
 > Create a token (enable repo permissions) https://github.com/settings/tokens/
 
 If you use the current repo's token:
