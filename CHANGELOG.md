@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### New features
+
+- Show contributors information.
+
 ## 1.0.3
 
 ### New features

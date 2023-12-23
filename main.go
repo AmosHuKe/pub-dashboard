@@ -29,29 +29,39 @@ type MarkdownTable struct {
 	Popularity   string
 	Issues       string
 	PullRequests string
+	Contributors string
 }
 
 // 主 Package 信息
 type PackageInfo struct {
-	Code         int // 0: error 1：success
-	Name         string
-	Version      string
-	Description  string
-	Homepage     string
-	Repository   string
-	IssueTracker string
-	Published    string
-	GithubUser   string
-	GithubRepo   string
-	GithubInfo   GithubInfo
-	ScoreInfo    PackageScoreInfo
+	Code                   int // 0: error 1：success
+	Name                   string
+	Version                string
+	Description            string
+	Homepage               string
+	Repository             string
+	IssueTracker           string
+	Published              string
+	GithubUser             string
+	GithubRepo             string
+	GithubBaseInfo         GithubBaseInfo
+	GithubContributorsInfo []GithubContributorsInfo
+	ScoreInfo              PackageScoreInfo
 }
 
-type GithubInfo struct {
-	StargazersCount float64
-	ForksCount      float64
-	OpenIssuesCount float64
-	LicenseName     string
+type GithubBaseInfo struct {
+	StargazersCount   float64
+	ForksCount        float64
+	OpenIssuesCount   float64
+	LicenseName       string
+	ContributorsCount int
+}
+
+type GithubContributorsInfo struct {
+	Login     string `json:"login"`
+	AvatarUrl string `json:"avatar_url"`
+	HtmlUrl   string `json:"html_url"`
+	Type      string `json:"type"`
 }
 
 type PackageScoreInfo struct {
@@ -290,16 +300,16 @@ func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
 	}
 	// 获取 Github 相关信息
 	if packageInfo.GithubUser != "" && packageInfo.GithubRepo != "" {
-		packageInfo.GithubInfo = getGithubBaseInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
+		packageInfo.GithubBaseInfo = getGithubBaseInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
+		packageInfo.GithubContributorsInfo, packageInfo.GithubBaseInfo.ContributorsCount = getGithubContributorsInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
 	}
-
 }
 
-// 获取 Github Stars
+// 获取 Github 基础信息
 // [githubToken] Github Token
 // [user] 用户
 // [repo] 仓库
-func getGithubBaseInfo(githubToken string, user string, repo string) GithubInfo {
+func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseInfo {
 	client := &http.Client{}
 	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo, strings.NewReader(""))
 	if err != nil {
@@ -345,12 +355,56 @@ func getGithubBaseInfo(githubToken string, user string, repo string) GithubInfo 
 	} else {
 		fmt.Println("📦⚠️ Github: " + value)
 	}
-	return GithubInfo{
+	return GithubBaseInfo{
 		StargazersCount: stargazersCount,
 		ForksCount:      forksCount,
 		OpenIssuesCount: openIssuesCount,
 		LicenseName:     licenseName,
 	}
+}
+
+// 获取 Github 贡献者信息
+// [githubToken] Github Token
+// [user] 用户
+// [repo] 仓库
+//
+// @return (贡献者列表, 贡献者总数（最多100）)
+func getGithubContributorsInfo(githubToken string, user string, repo string) ([]GithubContributorsInfo, int) {
+	client := &http.Client{}
+	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo+"/contributors?page=1&per_page=100", strings.NewReader(""))
+	if err != nil {
+		fmt.Println(err)
+	}
+	resp.Header.Set("Authorization", "bearer "+githubToken)
+	resp.Header.Set("Accept", "application/vnd.github+json")
+	resp.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	res, err := client.Do(resp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer res.Body.Close()
+	jsonData, getErr := io.ReadAll(res.Body)
+	if getErr != nil {
+		fmt.Println(getErr)
+	}
+	var data []GithubContributorsInfo
+	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+		fmt.Println(err)
+	}
+
+	githubContributorsInfo := []GithubContributorsInfo{}
+	i := 1
+	/// 取前 3 位非 Bot 贡献者
+	for _, value := range data {
+		if i > 3 {
+			break
+		}
+		if value.Type == "User" {
+			githubContributorsInfo = append(githubContributorsInfo, value)
+			i++
+		}
+	}
+	return githubContributorsInfo, len(data)
 }
 
 // 格式化 Github 信息
@@ -419,8 +473,8 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 	case "githubStars":
 		// 按 github stars 排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].GithubInfo.StargazersCount
-			jData := packageInfoList[j].GithubInfo.StargazersCount
+			iData := packageInfoList[i].GithubBaseInfo.StargazersCount
+			jData := packageInfoList[j].GithubBaseInfo.StargazersCount
 			switch sortMode {
 			case "asc":
 				return iData < jData
@@ -454,7 +508,7 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sortMode string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
-		var name, version, published, githubStars, pubLikes, points, popularity, issues, pullRequests string
+		var name, version, published, githubStars, pubLikes, points, popularity, issues, pullRequests, contributors string
 		licenseName := "<strong>License:</strong> -"
 		platform := "<strong>Platform:</strong> -"
 		switch value.Code {
@@ -480,12 +534,37 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// Github
 			if value.GithubUser != "" && value.GithubRepo != "" {
 				githubURL := value.GithubUser + "/" + value.GithubRepo
-				if value.GithubInfo.LicenseName != "" {
-					licenseName = "<strong>License:</strong> " + value.GithubInfo.LicenseName
+				if value.GithubBaseInfo.LicenseName != "" {
+					licenseName = "<strong>License:</strong> " + value.GithubBaseInfo.LicenseName
 				}
 				githubStars = "[![GitHub stars](https://img.shields.io/github/stars/" + githubURL + "?style=social&logo=github&logoColor=1F2328&label=)](https://github.com/" + githubURL + ")"
 				issues = "[![GitHub issues](https://img.shields.io/github/issues/" + githubURL + "?label=)](https://github.com/" + githubURL + "/issues)"
 				pullRequests = "[![GitHub pull requests](https://img.shields.io/github/issues-pr/" + githubURL + "?label=)](https://github.com/" + githubURL + "/pulls)"
+
+				// contributors begin
+				for index, contributorsvalue := range value.GithubContributorsInfo {
+					switch len(value.GithubContributorsInfo) {
+					case 1:
+						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="36px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+					case 2:
+						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+					case 3:
+						if index == 0 {
+							contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="36px" src="` + contributorsvalue.AvatarUrl + `" /></a> <br/>`
+						} else {
+							contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+						}
+					default:
+						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+					}
+
+				}
+				if value.GithubBaseInfo.ContributorsCount >= 100 {
+					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: 99+</a>`
+				} else {
+					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: ` + strconv.Itoa(value.GithubBaseInfo.ContributorsCount) + `</a>`
+				}
+				// contributors end
 			}
 		}
 		markdownTableList = append(
@@ -503,21 +582,22 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 				Popularity:   popularity,
 				Issues:       issues,
 				PullRequests: pullRequests,
+				Contributors: contributors,
 			},
 		)
 	}
 
 	markdown := ""
 	markdown += "<sub>Sort by " + sortField + " | Total " + strconv.Itoa(len(markdownTableList)) + "</sub> \n\n" +
-		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points/Popularity</sub> | <sub>Issues</sub> | <sub>Pull requests</sub> | \n" +
-		"|--------------------|------------------------|------------------------------|-------------------|--------------------------| \n"
+		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points/Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | \n" +
+		"|--------------------|------------------------|------------------------------|-----------------------------------|:-----------------------:| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
 			"| " + value.Name + " <sup><strong>" + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> <sub>" + value.LicenseName + "</sub> <br/> <sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
 			" | " + value.GithubStars + " <br/> " + value.PubLikes +
 			" | " + value.Points + " <br/> " + value.Popularity +
-			" | " + value.Issues +
-			" | " + value.PullRequests +
+			" | " + value.Issues + " <br/> " + value.PullRequests +
+			" | " + value.Contributors +
 			" | \n"
 	}
 	return markdown
