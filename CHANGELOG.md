@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+### Improvements
+
+- Update table.
+
 ## 1.0.4
 
 ### New features
