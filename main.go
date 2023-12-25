@@ -589,7 +589,7 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 
 	markdown := ""
 	markdown += "<sub>Sort by " + sortField + " | Total " + strconv.Itoa(len(markdownTableList)) + "</sub> \n\n" +
-		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points/Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | \n" +
+		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points / Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | \n" +
 		"|--------------------|------------------------|------------------------------|-----------------------------------|:-----------------------:| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
