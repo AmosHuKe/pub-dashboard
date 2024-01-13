@@ -50,11 +50,13 @@ type PackageInfo struct {
 }
 
 type GithubBaseInfo struct {
-	StargazersCount   float64
-	ForksCount        float64
-	OpenIssuesCount   float64
-	LicenseName       string
-	ContributorsCount int
+	StargazersCount float64 `json:"stargazers_count"`
+	ForksCount      float64 `json:"forks_count"`
+	OpenIssuesCount float64 `json:"open_issues_count"`
+	License         struct {
+		Name string `json:"name"`
+	} `json:"license"`
+	ContributorsTotal int
 }
 
 type GithubContributorsInfo struct {
@@ -62,6 +64,20 @@ type GithubContributorsInfo struct {
 	AvatarUrl string `json:"avatar_url"`
 	HtmlUrl   string `json:"html_url"`
 	Type      string `json:"type"`
+}
+
+type PackageBaseInfo struct {
+	Name   string `json:"name"`
+	Latest struct {
+		Pubspec struct {
+			Version      string `json:"version"`
+			Description  string `json:"description"`
+			Homepage     string `json:"homepage"`
+			Repository   string `json:"repository"`
+			IssueTracker string `json:"issue_tracker"`
+		} `json:"pubspec"`
+		Published string `json:"published"`
+	} `json:"latest"`
 }
 
 type PackageScoreInfo struct {
@@ -75,12 +91,10 @@ type PackageScoreInfo struct {
 }
 
 type PublisherInfo struct {
-	Packages []PackageName `json:"packages"`
-	Next     string        `json:"next"`
-}
-
-type PackageName struct {
-	Package string `json:"package"`
+	Packages []struct {
+		Package string `json:"package"`
+	} `json:"packages"`
+	Next string `json:"next"`
 }
 
 func main() {
@@ -110,6 +124,7 @@ func main() {
 // [publisherName] publisher 列表(逗号,分割)
 // Return 与 packageList 相同的 package 名称列表(逗号,分割)
 func getPublisherPackages(publisherName string) string {
+	printErrTitle := "🌏⚠️ PublisherPackages: "
 	if publisherName == "" {
 		return ""
 	}
@@ -125,19 +140,19 @@ func getPublisherPackages(publisherName string) string {
 		// 查找每一页
 		pageIndex := 1
 		for pageIndex != 0 {
-			fmt.Println("🌏 Publisher: " + publisherName + ", Page: " + strconv.Itoa(pageIndex))
+			fmt.Println("🌏🔗 Publisher: " + publisherName + ", Page: " + strconv.Itoa(pageIndex))
 			res, err := http.Get("https://pub.dev/api/search?q=publisher:" + publisherName + "&page=" + strconv.Itoa(pageIndex))
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println(printErrTitle, err)
 			}
 			defer res.Body.Close()
-			jsonData, getErr := io.ReadAll(res.Body)
-			if getErr != nil {
-				fmt.Println(getErr)
+			jsonData, err := io.ReadAll(res.Body)
+			if err != nil {
+				fmt.Println(printErrTitle, err)
 			}
 			data := PublisherInfo{}
 			if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-				fmt.Println(err)
+				fmt.Println(printErrTitle, err)
 			}
 			if len(data.Packages) > 0 {
 				for _, packageName := range data.Packages {
@@ -158,6 +173,7 @@ func getPublisherPackages(publisherName string) string {
 // [githubToken] Github Token
 // [packagesName] package 名称列表(逗号,分割)
 func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
+	printErrTitle := "📦⚠️ PackageInfo: "
 	packageList := removeDuplicates(strings.Split(packagesName, ","))
 	fmt.Println("📦", packageList)
 	packageInfoList := []PackageInfo{}
@@ -169,56 +185,30 @@ func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
 		packageName := strings.TrimSpace(value)
 		res, err := http.Get("https://pub.dev/api/packages/" + packageName)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(printErrTitle, err)
 		}
 		defer res.Body.Close()
-		jsonData, getErr := io.ReadAll(res.Body)
-		if getErr != nil {
-			fmt.Println(getErr)
+		jsonData, err := io.ReadAll(res.Body)
+		if err != nil {
+			fmt.Println(printErrTitle, err)
 		}
-		var data map[string]interface{}
+		var data PackageBaseInfo
 		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-			fmt.Println(err)
+			fmt.Println(printErrTitle, err)
 		}
 
-		var pubName, pubVersion, pubDescription, pubHomepage, pubRepository, pubIssueTracker, pubPublished string
-		if value, ok := data["error"].(map[string]interface{}); !ok {
-			if len(value) <= 0 {
-				if value, ok := data["name"].(string); ok {
-					pubName = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["version"].(string); ok {
-					pubVersion = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["description"].(string); ok {
-					pubDescription = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["homepage"].(string); ok {
-					pubHomepage = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["repository"].(string); ok {
-					pubRepository = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["pubspec"].(map[string]interface{})["issue_tracker"].(string); ok {
-					pubIssueTracker = value
-				}
-				if value, ok := data["latest"].(map[string]interface{})["published"].(string); ok {
-					pubPublished = value
-				}
-			}
-		}
-		if pubName != "" {
+		if data.Name != "" {
 			// 可获取信息
 			packageInfo := PackageInfo{
 				Code:         1,
-				Name:         pubName,
-				Version:      pubVersion,
-				Description:  pubDescription,
-				Homepage:     pubHomepage,
-				Repository:   pubRepository,
-				IssueTracker: pubIssueTracker,
-				Published:    pubPublished,
-				ScoreInfo:    getPackageScoreInfo(pubName),
+				Name:         data.Name,
+				Version:      data.Latest.Pubspec.Version,
+				Description:  data.Latest.Pubspec.Description,
+				Homepage:     data.Latest.Pubspec.Homepage,
+				Repository:   data.Latest.Pubspec.Repository,
+				IssueTracker: data.Latest.Pubspec.IssueTracker,
+				Published:    data.Latest.Published,
+				ScoreInfo:    getPackageScoreInfo(data.Name),
 			}
 			getGithubInfo(githubToken, &packageInfo)
 			packageInfoList = append(packageInfoList, packageInfo)
@@ -241,18 +231,19 @@ func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
 // 获取 Package score 信息
 // [packageName] 单个 package 名称
 func getPackageScoreInfo(packageName string) PackageScoreInfo {
+	printErrTitle := "📦⚠️ PackageScoreInfo: "
 	res, err := http.Get("https://pub.dev/api/packages/" + packageName + "/score")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 	defer res.Body.Close()
-	jsonData, getErr := io.ReadAll(res.Body)
-	if getErr != nil {
-		fmt.Println(getErr)
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(printErrTitle, err)
 	}
 	var data PackageScoreInfo
 	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 
 	// 获取 Tags 相关内容
@@ -268,7 +259,6 @@ func getPackageScoreInfo(packageName string) PackageScoreInfo {
 	}
 	data.TagsPlatform = tagsPlatform
 	return data
-
 }
 
 // 获取 Github 信息
@@ -301,7 +291,7 @@ func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
 	// 获取 Github 相关信息
 	if packageInfo.GithubUser != "" && packageInfo.GithubRepo != "" {
 		packageInfo.GithubBaseInfo = getGithubBaseInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
-		packageInfo.GithubContributorsInfo, packageInfo.GithubBaseInfo.ContributorsCount = getGithubContributorsInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
+		packageInfo.GithubContributorsInfo, packageInfo.GithubBaseInfo.ContributorsTotal = getGithubContributorsInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
 	}
 }
 
@@ -310,57 +300,30 @@ func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
 // [user] 用户
 // [repo] 仓库
 func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseInfo {
+	printErrTitle := "📦⚠️ GithubBaseInfo: "
 	client := &http.Client{}
 	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo, strings.NewReader(""))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 	resp.Header.Set("Authorization", "bearer "+githubToken)
 	resp.Header.Set("Accept", "application/vnd.github+json")
 	resp.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	res, err := client.Do(resp)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 	defer res.Body.Close()
-	jsonData, getErr := io.ReadAll(res.Body)
-	if getErr != nil {
-		fmt.Println(getErr)
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(printErrTitle, err)
 	}
-	var data map[string]interface{}
+	var data GithubBaseInfo
 	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 
-	var stargazersCount, forksCount, openIssuesCount float64
-	var licenseName string
-	if value, ok := data["message"].(string); !ok {
-		if value, ok := data["stargazers_count"].(float64); ok {
-			stargazersCount = value
-		}
-		if value, ok := data["forks_count"].(float64); ok {
-			forksCount = value
-		}
-		if value, ok := data["open_issues_count"].(float64); ok {
-			openIssuesCount = value
-		}
-		if value, ok := data["license"].(string); !ok {
-			if value != "null" {
-				if value, ok := data["license"].(map[string]interface{})["name"].(string); ok {
-					licenseName = value
-				}
-			}
-		}
-
-	} else {
-		fmt.Println("📦⚠️ Github: " + value)
-	}
-	return GithubBaseInfo{
-		StargazersCount: stargazersCount,
-		ForksCount:      forksCount,
-		OpenIssuesCount: openIssuesCount,
-		LicenseName:     licenseName,
-	}
+	return data
 }
 
 // 获取 Github 贡献者信息
@@ -370,26 +333,27 @@ func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseI
 //
 // @return (贡献者列表, 贡献者总数（最多100）)
 func getGithubContributorsInfo(githubToken string, user string, repo string) ([]GithubContributorsInfo, int) {
+	printErrTitle := "📦⚠️ GithubContributorsInfo: "
 	client := &http.Client{}
 	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo+"/contributors?page=1&per_page=100", strings.NewReader(""))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 	resp.Header.Set("Authorization", "bearer "+githubToken)
 	resp.Header.Set("Accept", "application/vnd.github+json")
 	resp.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	res, err := client.Do(resp)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 	defer res.Body.Close()
-	jsonData, getErr := io.ReadAll(res.Body)
-	if getErr != nil {
-		fmt.Println(getErr)
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(printErrTitle, err)
 	}
 	var data []GithubContributorsInfo
 	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-		fmt.Println(err)
+		fmt.Println(printErrTitle, err)
 	}
 
 	githubContributorsInfo := []GithubContributorsInfo{}
@@ -508,9 +472,7 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sortMode string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
-		var name, version, published, githubStars, pubLikes, points, popularity, issues, pullRequests, contributors string
-		licenseName := "<strong>License:</strong> -"
-		platform := "<strong>Platform:</strong> -"
+		var name, version, platform, licenseName, published, githubStars, pubLikes, points, popularity, issues, pullRequests, contributors string
 		switch value.Code {
 		case 0:
 			// 无法获取信息
@@ -520,8 +482,11 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// Base
 			name = "[" + value.Name + "](https://pub.dev/packages/" + value.Name + ")"
 			version = "v" + value.Version
+			platform = "<strong>Platform:</strong> "
 			if len(value.ScoreInfo.TagsPlatform) > 0 {
-				platform = "<strong>Platform:</strong> " + strings.Join(value.ScoreInfo.TagsPlatform, ", ")
+				platform += strings.Join(value.ScoreInfo.TagsPlatform, ", ")
+			} else {
+				platform += "-"
 			}
 			published = "<strong>Published:</strong> " + value.Published
 			githubStars = ""
@@ -534,8 +499,11 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 			// Github
 			if value.GithubUser != "" && value.GithubRepo != "" {
 				githubURL := value.GithubUser + "/" + value.GithubRepo
-				if value.GithubBaseInfo.LicenseName != "" {
-					licenseName = "<strong>License:</strong> " + value.GithubBaseInfo.LicenseName
+				licenseName = "<strong>License:</strong> "
+				if value.GithubBaseInfo.License.Name != "" {
+					licenseName += value.GithubBaseInfo.License.Name
+				} else {
+					licenseName += "-"
 				}
 				githubStars = "[![GitHub stars](https://img.shields.io/github/stars/" + githubURL + "?style=social&logo=github&logoColor=1F2328&label=)](https://github.com/" + githubURL + ")"
 				issues = "[![GitHub issues](https://img.shields.io/github/issues/" + githubURL + "?label=)](https://github.com/" + githubURL + "/issues)"
@@ -559,10 +527,10 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 					}
 
 				}
-				if value.GithubBaseInfo.ContributorsCount >= 100 {
+				if value.GithubBaseInfo.ContributorsTotal >= 100 {
 					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: 99+</a>`
 				} else {
-					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: ` + strconv.Itoa(value.GithubBaseInfo.ContributorsCount) + `</a>`
+					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: ` + strconv.Itoa(value.GithubBaseInfo.ContributorsTotal) + `</a>`
 				}
 				// contributors end
 			}
