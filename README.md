@@ -26,6 +26,7 @@ Example: [Example.md](Example.md)
 
 If you use the current repo's token:
 > e.g. github_token: ${{ secrets.GITHUB_TOKEN }}  
+> https://docs.github.com/en/actions/security-guides/automatic-token-authentication  
 > Current repo's settings: Settings -> Actions -> General -> Workflow permissions -> Read and write permissions 
 
 3.Edit the settings in `.github/workflows/pub-dashboard.yml`
