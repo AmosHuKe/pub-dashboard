@@ -2,13 +2,13 @@
 
 Test  
 
-666 test <!-- md:PubDashboard-total start -->57<!-- md:PubDashboard-total end --> test 6666
+666 test <!-- md:PubDashboard-total begin -->57<!-- md:PubDashboard-total end --> test 6666
 
 > Test  
 
 ## Packages 1
 
-<!-- md:PubDashboard start --> 
+<!-- md:PubDashboard begin --> 
 <sub>Sort by published | Total 57</sub> 
 
 | <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points / Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | 
@@ -76,13 +76,13 @@ Updated on 2024-02-19T10:02:07Z by [Action](https://github.com/AmosHuKe/pub-dash
 
 Test  
 
-666 test <!-- md:PubDashboard-total start -->57<!-- md:PubDashboard-total end --> test 6666
+666 test <!-- md:PubDashboard-total begin -->57<!-- md:PubDashboard-total end --> test 6666
 
 > Test  
 
 ## Packages 2
 
-<!-- md:PubDashboard start --> 
+<!-- md:PubDashboard begin --> 
 <sub>Sort by published | Total 57</sub> 
 
 | <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points / Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | 
@@ -150,6 +150,6 @@ Updated on 2024-02-19T10:02:07Z by [Action](https://github.com/AmosHuKe/pub-dash
 
 Test  
 
-666 test <!-- md:PubDashboard-total start -->57<!-- md:PubDashboard-total end --> test 6666
+666 test <!-- md:PubDashboard-total begin -->57<!-- md:PubDashboard-total end --> test 6666
 
 > Test  

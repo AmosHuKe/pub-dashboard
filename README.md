@@ -9,13 +9,13 @@ Example: [Example.md](Example.md)
 * Table
 
 ```
-<!-- md:PubDashboard start --><!-- md:PubDashboard end -->
+<!-- md:PubDashboard begin --><!-- md:PubDashboard end -->
 ```
 
 * Package total
 
 ```
-<!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
+<!-- md:PubDashboard-total begin --><!-- md:PubDashboard-total end -->
 ```
 
 2.Enable read/write permissions

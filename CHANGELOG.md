@@ -35,7 +35,7 @@
 
 ### New features
 
-- Add `<!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->`.
+- Add `<!-- md:PubDashboard-total begin --><!-- md:PubDashboard-total end -->`.
 - Improved match multiple keywords.
 
 ## 1.0.0

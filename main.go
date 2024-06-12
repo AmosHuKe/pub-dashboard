@@ -575,24 +575,24 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 // [filename]	更新的文件
 // [markdown]	更新内容
 //
-// <!-- md:PubDashboard start --><!-- md:PubDashboard end -->
+// <!-- md:PubDashboard begin --><!-- md:PubDashboard end -->
 func updateMarkdownTable(filename string, markdown string) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("📄❌ updateMarkdownTable: Error reade a file: %w", err)
 	}
 
-	start := "<!-- md:PubDashboard start -->"
+	begin := "<!-- md:PubDashboard begin -->"
 	end := "<!-- md:PubDashboard end -->"
 	newMdText := bytes.NewBuffer(nil)
-	newMdText.WriteString(start)
+	newMdText.WriteString(begin)
 	newMdText.WriteString(" \n")
 	newMdText.WriteString(markdown)
 	newMdText.WriteString(" \n")
 	newMdText.WriteString("Updated on " + time.Now().Format(time.RFC3339) + " by [Action](https://github.com/AmosHuKe/pub-dashboard). \n")
 	newMdText.WriteString(end)
 
-	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
+	reg := regexp.MustCompile(begin + "(?s)(.*?)" + end)
 	newMd := reg.ReplaceAll(md, newMdText.Bytes())
 
 	err = os.WriteFile(filename, newMd, os.ModeAppend)
@@ -607,21 +607,21 @@ func updateMarkdownTable(filename string, markdown string) error {
 // [filename]	更新的文件
 // [total]		总数
 //
-// <!-- md:PubDashboard-total start --><!-- md:PubDashboard-total end -->
+// <!-- md:PubDashboard-total begin --><!-- md:PubDashboard-total end -->
 func updateMarkdownPackageTotal(filename string, total int) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("📄❌ updateMarkdownPackageTotal: Error reade a file: %w", err)
 	}
 
-	start := "<!-- md:PubDashboard-total start -->"
+	begin := "<!-- md:PubDashboard-total begin -->"
 	end := "<!-- md:PubDashboard-total end -->"
 	newMdText := bytes.NewBuffer(nil)
-	newMdText.WriteString(start)
+	newMdText.WriteString(begin)
 	newMdText.WriteString(strconv.Itoa(total))
 	newMdText.WriteString(end)
 
-	reg := regexp.MustCompile(start + "(?s)(.*?)" + end)
+	reg := regexp.MustCompile(begin + "(?s)(.*?)" + end)
 	newMd := reg.ReplaceAll(md, newMdText.Bytes())
 
 	err = os.WriteFile(filename, newMd, os.ModeAppend)
