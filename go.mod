@@ -1,3 +1,3 @@
 module github.com/AmosHuKe/pub-dashboard
 
-go 1.22.0
+go 1.22.4

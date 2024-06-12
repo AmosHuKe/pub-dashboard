@@ -5,7 +5,7 @@
 ### Improvements
 
 - Update table.
-- Upgrade golang to 1.22.0.
+- Upgrade golang to 1.22.4.
 - Upgrade actions/setup-go to v5.
 
 ## 1.0.4
