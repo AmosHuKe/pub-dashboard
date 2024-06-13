@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+### Improvements
+
+- Update: Use github.action_path in action.yaml
+
 ## 1.0.5
 
 ### Improvements

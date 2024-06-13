@@ -1,5 +1,5 @@
 name: 'pub-dashboard'
-description: 'Package dashboard table'
+description: 'Package Dashboard Table (pub.dev)'
 author: 'AmosHuKe'
 branding:
   icon: activity
@@ -47,18 +47,23 @@ runs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
 
-    - name: Clone action & repo
+    - name: Set GitHub Path
+      run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+      shell: bash
+      env:
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+
+    - name: Clone repo
       run: |
-        tempActionPath="temp/action/github.com/AmosHuKe/pub-dashboard"
-        git clone https://github.com/AmosHuKe/pub-dashboard $tempActionPath
-        git clone ${{ inputs.github_repo }} $tempActionPath/repo
-        cd $tempActionPath
+        tempPath="${{ github.action_path }}/temp/repo"
+        git clone ${{ inputs.github_repo }} $tempPath
+        cd $tempPath
       shell: bash
 
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version-file: temp/action/github.com/AmosHuKe/pub-dashboard/go.mod
+        go-version-file: '${{ github.action_path }}/go.mod'
         cache: false
       id: go
     
@@ -66,9 +71,9 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
       run: |
-        cd temp/action/github.com/AmosHuKe/pub-dashboard
-        go run main.go -githubToken ${{ inputs.github_token }} -filename repo/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
-        cd repo
+        tempPath="${{ github.action_path }}/temp/repo"
+        go run ${{ github.action_path }}/main.go -githubToken ${{ inputs.github_token }} -filename $tempPath/${{ inputs.filename }} -publisherList ${{ inputs.publisher_list }} -packageList ${{ inputs.package_list }} -sortField ${{ inputs.sort_field }} -sortMode ${{ inputs.sort_mode }}
+        cd $tempPath
         gh auth setup-git -h github.com
         git config user.name "${{ inputs.committer_username }}"
         git config user.email "${{ inputs.committer_email }}"
