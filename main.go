@@ -112,7 +112,7 @@ func main() {
 	packageAllList = publisherPackageList + "," + packageList
 	packageInfoList := getPackageInfo(githubToken, packageAllList)
 	sortPackageInfo(packageInfoList, sortField, sortMode)
-	markdownTable := assembleMarkdownTable(packageInfoList, sortField, sortMode)
+	markdownTable := assembleMarkdownTable(packageInfoList, sortField)
 
 	// 更新表格
 	updateMarkdownTable(filename, markdownTable)
@@ -469,7 +469,7 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 // [packageInfoList] 	信息列表
 // [sortField] 				排序字段 可选：name(default) | published
 // [sortMode] 				排序方式 可选：asc(default) | desc
-func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sortMode string) string {
+func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
 		var name, version, platform, licenseName, published, githubStars, pubLikes, points, popularity, issues, pullRequests, contributors string
@@ -510,27 +510,55 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string, sort
 				pullRequests = "[![GitHub pull requests](https://img.shields.io/github/issues-pr/" + githubURL + "?label=)](https://github.com/" + githubURL + "/pulls)"
 
 				// contributors begin
-				for index, contributorsvalue := range value.GithubContributorsInfo {
+				if len(value.GithubContributorsInfo) > 0 {
+					var githubContributorsInfoList = value.GithubContributorsInfo
+					contributors += `<table align="center" border="0">`
+
+					// contributors
 					switch len(value.GithubContributorsInfo) {
 					case 1:
-						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="36px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+						contributors += `<tr align="center">`
+						contributors += `<td>`
+						contributors += `<a href="` + githubContributorsInfoList[0].HtmlUrl + `"><img width="36px" src="` + githubContributorsInfoList[0].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `</tr>`
 					case 2:
-						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+						contributors += `<tr align="center">`
+						contributors += `<td>`
+						contributors += `<a href="` + githubContributorsInfoList[0].HtmlUrl + `"><img width="30px" src="` + githubContributorsInfoList[0].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `<td>`
+						contributors += `<a href="` + githubContributorsInfoList[1].HtmlUrl + `"><img width="30px" src="` + githubContributorsInfoList[1].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `</tr>`
 					case 3:
-						if index == 0 {
-							contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="36px" src="` + contributorsvalue.AvatarUrl + `" /></a> <br/>`
-						} else {
-							contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
-						}
-					default:
-						contributors += `<a href="` + contributorsvalue.HtmlUrl + `"><img width="30px" src="` + contributorsvalue.AvatarUrl + `" /></a> `
+						contributors += `<tr align="center">`
+						contributors += `<td colspan="2">`
+						contributors += `<a href="` + githubContributorsInfoList[0].HtmlUrl + `"><img width="36px" src="` + githubContributorsInfoList[0].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `</tr>`
+						contributors += `<tr align="center">`
+						contributors += `<td>`
+						contributors += `<a href="` + githubContributorsInfoList[1].HtmlUrl + `"><img width="30px" src="` + githubContributorsInfoList[1].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `<td>`
+						contributors += `<a href="` + githubContributorsInfoList[2].HtmlUrl + `"><img width="30px" src="` + githubContributorsInfoList[2].AvatarUrl + `" /></a>`
+						contributors += `</td>`
+						contributors += `</tr>`
 					}
 
-				}
-				if value.GithubBaseInfo.ContributorsTotal >= 100 {
-					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: 99+</a>`
-				} else {
-					contributors += `<br/> <a href="https://github.com/` + githubURL + `/graphs/contributors">Total: ` + strconv.Itoa(value.GithubBaseInfo.ContributorsTotal) + `</a>`
+					// total
+					contributors += `<tr align="center">`
+					contributors += `<td colspan="2">`
+					if value.GithubBaseInfo.ContributorsTotal >= 100 {
+						contributors += `<a href="https://github.com/` + githubURL + `/graphs/contributors">Total: 99+</a>`
+					} else {
+						contributors += `<a href="https://github.com/` + githubURL + `/graphs/contributors">Total: ` + strconv.Itoa(value.GithubBaseInfo.ContributorsTotal) + `</a>`
+					}
+					contributors += `</td>`
+					contributors += `</tr>`
+
+					contributors += `</table>`
 				}
 				// contributors end
 			}
