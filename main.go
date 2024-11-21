@@ -467,7 +467,7 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 
 // 组装表格内容
 // [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published
+// [sortField] 				排序字段 可选：name(default) | published | pubLikes | githubStars
 // [sortMode] 				排序方式 可选：asc(default) | desc
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) string {
 	markdownTableList := []MarkdownTable{}

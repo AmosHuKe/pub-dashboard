@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.8
+
+### Improvements
+
+- Upgrade: Bump Golang from 1.22.5 to 1.23.3.
+
 ## 1.0.7
 
 ### Improvements
