@@ -70,7 +70,7 @@ jobs:
 
 - ⁉️: Package not found
 - `publisher_list` and `package_list` are merged
-- The `Github link` is resolved by the `Homepage`, `Repository`, `IssueTracker` of `pub.dev`
+- The `Github link` is parsed by the `Homepage`, `Repository`, `IssueTracker` of `pub.dev`
 
 Thanks [Shields](https://github.com/badges/shields).
 

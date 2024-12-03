@@ -2,7 +2,7 @@
 
 Test  
 
-666 test <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> test 6666
+Total: <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> (xxx)  
 
 > Test  
 
@@ -79,7 +79,7 @@ Updated on 2024-11-21T16:37:51Z by [Action](https://github.com/AmosHuKe/pub-dash
 
 Test  
 
-666 test <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> test 6666
+Total: <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> (xxx)  
 
 > Test  
 
@@ -156,6 +156,6 @@ Updated on 2024-11-21T16:37:51Z by [Action](https://github.com/AmosHuKe/pub-dash
 
 Test  
 
-666 test <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> test 6666
+Total: <!-- md:PubDashboard-total begin -->60<!-- md:PubDashboard-total end --> (xxx)  
 
 > Test  
