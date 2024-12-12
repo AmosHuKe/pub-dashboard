@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -17,19 +18,19 @@ import (
 
 // 主 MarkdownTable
 type MarkdownTable struct {
-	Name         string
-	Version      string
-	Description  string
-	LicenseName  string
-	Platform     string
-	Published    string
-	GithubStars  string
-	PubLikes     string
-	Points       string
-	Popularity   string
-	Issues       string
-	PullRequests string
-	Contributors string
+	Name                   string
+	Version                string
+	Description            string
+	LicenseName            string
+	Platform               string
+	Published              string
+	GithubStars            string
+	PubLikes               string
+	PubPoints              string
+	PubDownloadCount30Days string
+	Issues                 string
+	PullRequests           string
+	Contributors           string
 }
 
 // 主 Package 信息
@@ -81,13 +82,13 @@ type PackageBaseInfo struct {
 }
 
 type PackageScoreInfo struct {
-	GrantedPoints   float64  `json:"grantedPoints"`
-	MaxPoints       float64  `json:"maxPoints"`
-	LikeCount       float64  `json:"likeCount"`
-	PopularityScore float64  `json:"popularityScore"`
-	Tags            []string `json:"tags"`
-	LastUpdated     string   `json:"lastUpdated"`
-	TagsPlatform    []string
+	GrantedPoints       float64  `json:"grantedPoints"`
+	MaxPoints           float64  `json:"maxPoints"`
+	LikeCount           float64  `json:"likeCount"`
+	DownloadCount30Days int      `json:"downloadCount30Days"`
+	Tags                []string `json:"tags"`
+	LastUpdated         string   `json:"lastUpdated"`
+	TagsPlatform        []string
 }
 
 type PublisherInfo struct {
@@ -103,7 +104,7 @@ func main() {
 	flag.StringVar(&filename, "filename", "README.md", "文件名 如: README.md")
 	flag.StringVar(&publisherList, "publisherList", "", "publisher 如: aa,bb,cc")
 	flag.StringVar(&packageList, "packageList", "", "package 如: aa,bb,cc")
-	flag.StringVar(&sortField, "sortField", "name", "name | published | pubLikes | githubStars")
+	flag.StringVar(&sortField, "sortField", "name", "name | published | pubLikes | pubDownloads | githubStars")
 	flag.StringVar(&sortMode, "sortMode", "asc", "asc | desc")
 	flag.Parse()
 
@@ -388,7 +389,7 @@ func formatGithubInfo(value string) (string, string) {
 
 // 排序
 // [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published | pubLikes | githubStars
+// [sortField] 				排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
 // [sortMode] 				排序方式 可选：asc(default) | desc
 func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode string) {
 	switch sortField {
@@ -434,6 +435,20 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 				return iData < jData
 			}
 		})
+	case "pubDownloads":
+		// 按 pub downloads 排序
+		sort.SliceStable(packageInfoList, func(i, j int) bool {
+			iData := packageInfoList[i].ScoreInfo.DownloadCount30Days
+			jData := packageInfoList[j].ScoreInfo.DownloadCount30Days
+			switch sortMode {
+			case "asc":
+				return iData < jData
+			case "desc":
+				return iData > jData
+			default:
+				return iData < jData
+			}
+		})
 	case "githubStars":
 		// 按 github stars 排序
 		sort.SliceStable(packageInfoList, func(i, j int) bool {
@@ -467,12 +482,14 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 
 // 组装表格内容
 // [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published | pubLikes | githubStars
+// [sortField] 				排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
 // [sortMode] 				排序方式 可选：asc(default) | desc
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
-		var name, version, platform, licenseName, published, githubStars, pubLikes, points, popularity, issues, pullRequests, contributors string
+		var name, version, platform, licenseName, published,
+			githubStars, pubLikes, pubPoints, pubDownloadCount30Days,
+			issues, pullRequests, contributors string
 		switch value.Code {
 		case 0:
 			// 无法获取信息
@@ -480,6 +497,9 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) stri
 		case 1:
 			// 已获取信息
 			// Base
+			const downloadIcon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwxKSI+PHBhdGggZmlsbD0ibm9uZSIgZD0iTTAgMGgyNHYyNEgweiI+PC9wYXRoPjxwYXRoIGQ9Ik0zIDE5SDIxVjIxSDNWMTlaTTEzIDEzLjE3MTZMMTkuMDcxMSA3LjEwMDVMMjAuNDg1MyA4LjUxNDcyTDEyIDE3TDMuNTE0NzIgOC41MTQ3Mkw0LjkyODkzIDcuMTAwNUwxMSAxMy4xNzE2VjJIMTNWMTMuMTcxNloiPjwvcGF0aD48L3N2Zz4="
+			const pointIcon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwxKSI+PHBhdGggZmlsbD0ibm9uZSIgZD0iTTAgMGgyNHYyNEgweiI+PC9wYXRoPjxwYXRoIGQ9Ik0yMyAxMkwxNS45Mjg5IDE5LjA3MTFMMTQuNTE0NyAxNy42NTY5TDIwLjE3MTYgMTJMMTQuNTE0NyA2LjM0MzE3TDE1LjkyODkgNC45Mjg5NkwyMyAxMlpNMy44Mjg0MyAxMkw5LjQ4NTI4IDE3LjY1NjlMOC4wNzEwNyAxOS4wNzExTDEgMTJMOC4wNzEwNyA0LjkyODk2TDkuNDg1MjggNi4zNDMxN0wzLjgyODQzIDEyWiI+PC9wYXRoPjwvc3ZnPg=="
+
 			name = "[" + value.Name + "](https://pub.dev/packages/" + value.Name + ")"
 			version = "v" + value.Version
 			platform = "<strong>Platform:</strong> "
@@ -491,8 +511,8 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) stri
 			published = "<strong>Published:</strong> " + value.Published
 			githubStars = ""
 			pubLikes = "[![Pub likes](https://img.shields.io/pub/likes/" + value.Name + "?style=social&logo=flutter&logoColor=168AFD&label=)](https://pub.dev/packages/" + value.Name + ")"
-			points = "[![Pub points](https://img.shields.io/pub/points/" + value.Name + "?label=)](https://pub.dev/packages/" + value.Name + "/score)"
-			popularity = "[![popularity](https://img.shields.io/pub/popularity/" + value.Name + "?label=)](https://pub.dev/packages/" + value.Name + "/score)"
+			pubPoints = "[![Pub points](https://img.shields.io/pub/points/" + value.Name + "?style=flat&label=&logo=" + pointIcon + ")](https://pub.dev/packages/" + value.Name + "/score)"
+			pubDownloadCount30Days = "[![Pub downloads](https://img.shields.io/badge/" + formatDownloadCount(value.ScoreInfo.DownloadCount30Days) + url.PathEscape("/") + "month-4AC51C?style=flat&logo=" + downloadIcon + ")](https://pub.dev/packages/" + value.Name + ")"
 			issues = "-"
 			pullRequests = "-"
 
@@ -566,32 +586,32 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) stri
 		markdownTableList = append(
 			markdownTableList,
 			MarkdownTable{
-				Name:         name,
-				Version:      version,
-				Description:  value.Description,
-				LicenseName:  licenseName,
-				Platform:     platform,
-				Published:    published,
-				GithubStars:  githubStars,
-				PubLikes:     pubLikes,
-				Points:       points,
-				Popularity:   popularity,
-				Issues:       issues,
-				PullRequests: pullRequests,
-				Contributors: contributors,
+				Name:                   name,
+				Version:                version,
+				Description:            value.Description,
+				LicenseName:            licenseName,
+				Platform:               platform,
+				Published:              published,
+				GithubStars:            githubStars,
+				PubLikes:               pubLikes,
+				PubPoints:              pubPoints,
+				PubDownloadCount30Days: pubDownloadCount30Days,
+				Issues:                 issues,
+				PullRequests:           pullRequests,
+				Contributors:           contributors,
 			},
 		)
 	}
 
 	markdown := ""
 	markdown += "<sub>Sort by " + sortField + " | Total " + strconv.Itoa(len(markdownTableList)) + "</sub> \n\n" +
-		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Points / Popularity</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | \n" +
+		"| <sub>Package</sub> | <sub>Stars/Likes</sub> | <sub>Downloads/Points</sub> | <sub>Issues / Pull_requests</sub> | <sub>Contributors</sub> | \n" +
 		"|--------------------|------------------------|------------------------------|-----------------------------------|:-----------------------:| \n"
 	for _, value := range markdownTableList {
 		markdown += "" +
 			"| " + value.Name + " <sup><strong>" + value.Version + "</strong></sup> <br/> <sub>" + formatString(value.Description) + "</sub> <br/> <sub>" + value.LicenseName + "</sub> <br/> <sub>" + value.Platform + "</sub> <br/> " + "<sub>" + value.Published + "</sub>" +
 			" | " + value.GithubStars + " <br/> " + value.PubLikes +
-			" | " + value.Points + " <br/> " + value.Popularity +
+			" | " + value.PubDownloadCount30Days + " <br/> " + value.PubPoints +
 			" | " + value.Issues + " <br/> " + value.PullRequests +
 			" | " + value.Contributors +
 			" | \n"
@@ -666,6 +686,25 @@ func formatString(v string) string {
 	value = strings.ReplaceAll(value, "\n", " ")
 	value = strings.ReplaceAll(value, "|", "丨")
 	return value
+}
+
+func formatDownloadCount(num int) string {
+	var formatted string
+	var suffix string
+
+	if num >= 1000000 {
+		formatted = fmt.Sprintf("%.2f", float64(num)/1000000)
+		suffix = "M"
+	} else if num >= 1000 {
+		formatted = fmt.Sprintf("%.2f", float64(num)/1000)
+		suffix = "k"
+	} else {
+		return strconv.Itoa(num)
+	}
+
+	// 去掉多余的0和小数点
+	formatted = strings.TrimRight(strings.TrimRight(formatted, "0"), ".")
+	return formatted + suffix
 }
 
 // 去重

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+### New features
+
+- Migrate from 'Popularity' to 'Downloads'.
+- New sort field: pubDownloads.
+
 ## 1.0.8
 
 ### Improvements
