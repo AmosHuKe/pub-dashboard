@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+### Fixes
+
+- Avoid private avatars.
+
 ## 1.1.0
 
 ### New features
