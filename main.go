@@ -62,7 +62,7 @@ type GithubBaseInfo struct {
 
 type GithubContributorsInfo struct {
 	Login     string `json:"login"`
-	Id        string `json:"id"`
+	Id        int    `json:"id"`
 	AvatarUrl string `json:"avatar_url"`
 	HtmlUrl   string `json:"html_url"`
 	Type      string `json:"type"`
@@ -683,8 +683,8 @@ func updateMarkdownPackageTotal(filename string, total int) error {
 
 // 由于直接获取 GithubContributorsInfo.AvatarUrl 有可能会是私有头像地址，
 // 暂时固定头像地址。
-func getGithubAvatarUrl(githubId string) string {
-	return "https://avatars.githubusercontent.com/u/" + githubId + "?v=4"
+func getGithubAvatarUrl(githubId int) string {
+	return "https://avatars.githubusercontent.com/u/" + strconv.Itoa(githubId) + "?v=4"
 }
 
 // 格式化字符串
