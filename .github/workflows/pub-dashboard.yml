@@ -27,6 +27,6 @@ jobs:
           github_repo: "https://github.com/AmosHuKe/pub-dashboard"
           filename: "Example.md"
           publisher_list: "fluttercandies.com"
-          package_list: "extended_image,wechat_assets_picker,flutter_tilt"
+          package_list: "extended_image,wechat_assets_picker,flutter_tilt,abccba"
           sort_field: "published"
           sort_mode: "asc"

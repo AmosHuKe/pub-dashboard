@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// 主 MarkdownTable
+// 主 MarkdownTable 用于存储每个 package 在 Markdown 表格中的展示信息
 type MarkdownTable struct {
 	Name                   string
 	Version                string
@@ -33,7 +33,7 @@ type MarkdownTable struct {
 	Contributors           string
 }
 
-// 主 Package 信息
+// 主 Package 信息，聚合 package 所有相关的数据
 type PackageInfo struct {
 	Code                   int // 0: error 1：success
 	Name                   string
@@ -50,6 +50,7 @@ type PackageInfo struct {
 	ScoreInfo              PackageScoreInfo
 }
 
+// 每个 package 对应 Github 仓库的基础信息
 type GithubBaseInfo struct {
 	StargazersCount float64 `json:"stargazers_count"`
 	ForksCount      float64 `json:"forks_count"`
@@ -60,6 +61,7 @@ type GithubBaseInfo struct {
 	ContributorsTotal int
 }
 
+// 每个 package 对应 Github 仓库的贡献者基础信息
 type GithubContributorsInfo struct {
 	Login     string `json:"login"`
 	Id        int    `json:"id"`
@@ -68,6 +70,7 @@ type GithubContributorsInfo struct {
 	Type      string `json:"type"`
 }
 
+// Pub.dev package 基础信息
 type PackageBaseInfo struct {
 	Name   string `json:"name"`
 	Latest struct {
@@ -82,6 +85,7 @@ type PackageBaseInfo struct {
 	} `json:"latest"`
 }
 
+// Pub.dev package 评分相关信息
 type PackageScoreInfo struct {
 	GrantedPoints       float64  `json:"grantedPoints"`
 	MaxPoints           float64  `json:"maxPoints"`
@@ -92,6 +96,7 @@ type PackageScoreInfo struct {
 	TagsPlatform        []string
 }
 
+// Pub.dev publisher 下所有 package 信息
 type PublisherInfo struct {
 	Packages []struct {
 		Package string `json:"package"`
@@ -109,22 +114,31 @@ func main() {
 	flag.StringVar(&sortMode, "sortMode", "asc", "asc | desc")
 	flag.Parse()
 
-	var packageAllList string
-	publisherPackageList := getPublisherPackages(publisherList)
-	packageAllList = publisherPackageList + "," + packageList
+	packageAllList := mergePackageList(publisherList, packageList)
 	packageInfoList := getPackageInfo(githubToken, packageAllList)
 	sortPackageInfo(packageInfoList, sortField, sortMode)
 	markdownTable := assembleMarkdownTable(packageInfoList, sortField)
 
 	// 更新表格
-	updateMarkdownTable(filename, markdownTable)
+	if err := updateMarkdownTable(filename, markdownTable); err != nil {
+		fmt.Println(err)
+	}
 	// 更新总数
-	updateMarkdownPackageTotal(filename, len(packageInfoList))
+	if err := updateMarkdownPackageTotal(filename, len(packageInfoList)); err != nil {
+		fmt.Println(err)
+	}
+}
+
+// 合并 publisher 的 package 和自定义 package 列表，并去重
+func mergePackageList(publisherList, packageList string) string {
+	publisherPackageList := getPublisherPackages(publisherList)
+	all := strings.Split(publisherPackageList+","+packageList, ",")
+	return strings.Join(removeDuplicates(all), ",")
 }
 
 // 通过 Publisher 获取所有 Package 名称
-// [publisherName] publisher 列表(逗号,分割)
-// Return 与 packageList 相同的 package 名称列表(逗号,分割)
+// - [publisherName] publisher 列表(逗号,分割)
+// @return 与 packageList 相同的 package 名称列表(逗号,分割)
 func getPublisherPackages(publisherName string) string {
 	printErrTitle := "🌏⚠️ PublisherPackages: "
 	if publisherName == "" {
@@ -142,38 +156,41 @@ func getPublisherPackages(publisherName string) string {
 		// 查找每一页
 		pageIndex := 1
 		for pageIndex != 0 {
-			fmt.Println("🌏🔗 Publisher: " + publisherName + ", Page: " + strconv.Itoa(pageIndex))
-			res, err := http.Get("https://pub.dev/api/search?q=publisher:" + publisherName + "&page=" + strconv.Itoa(pageIndex))
+			fmt.Printf("🌏🔗 Publisher: %s, Page: %d \n", publisherName, pageIndex)
+			res, err := http.Get(fmt.Sprintf("https://pub.dev/api/search?q=publisher:%s&page=%d", publisherName, pageIndex))
 			if err != nil {
 				fmt.Println(printErrTitle, err)
+				break
 			}
-			defer res.Body.Close()
 			jsonData, err := io.ReadAll(res.Body)
+			res.Body.Close()
 			if err != nil {
 				fmt.Println(printErrTitle, err)
+				break
 			}
 			data := PublisherInfo{}
-			if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+			if err := json.Unmarshal(jsonData, &data); err != nil {
 				fmt.Println(printErrTitle, err)
+				break
 			}
-			if len(data.Packages) > 0 {
-				for _, packageName := range data.Packages {
-					if packageName.Package != "" {
-						packageNameList = append(packageNameList, packageName.Package)
-					}
-				}
-				pageIndex++
-			} else {
+			if len(data.Packages) == 0 {
 				pageIndex = 0
+				break
 			}
+			for _, packageName := range data.Packages {
+				if packageName.Package != "" {
+					packageNameList = append(packageNameList, packageName.Package)
+				}
+			}
+			pageIndex++
 		}
 	}
-	return strings.Join(packageNameList, ",")
+	return strings.Join(removeDuplicates(packageNameList), ",")
 }
 
-// 获取 Package 信息
-// [githubToken] Github Token
-// [packagesName] package 名称列表(逗号,分割)
+// 获取所有 Package 信息
+// - [githubToken] Github Token
+// - [packagesName] package 名称列表(逗号,分割)
 func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
 	printErrTitle := "📦⚠️ PackageInfo: "
 	packageList := removeDuplicates(strings.Split(packagesName, ","))
@@ -185,87 +202,76 @@ func getPackageInfo(githubToken string, packagesName string) []PackageInfo {
 		}
 		fmt.Println("📦🔥 " + value)
 		packageName := strings.TrimSpace(value)
-		res, err := http.Get("https://pub.dev/api/packages/" + packageName)
+		res, err := http.Get(fmt.Sprintf("https://pub.dev/api/packages/%s", packageName))
 		if err != nil {
 			fmt.Println(printErrTitle, err)
 		}
-		defer res.Body.Close()
 		jsonData, err := io.ReadAll(res.Body)
+		res.Body.Close()
 		if err != nil {
 			fmt.Println(printErrTitle, err)
 		}
 		var data PackageBaseInfo
-		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+		if err := json.Unmarshal(jsonData, &data); err != nil {
 			fmt.Println(printErrTitle, err)
 		}
-
-		if data.Name != "" {
-			// 可获取信息
-			packageInfo := PackageInfo{
-				Code:         1,
-				Name:         data.Name,
-				Version:      data.Latest.Pubspec.Version,
-				Description:  data.Latest.Pubspec.Description,
-				Homepage:     data.Latest.Pubspec.Homepage,
-				Repository:   data.Latest.Pubspec.Repository,
-				IssueTracker: data.Latest.Pubspec.IssueTracker,
-				Published:    data.Latest.Published,
-				ScoreInfo:    getPackageScoreInfo(data.Name),
-			}
-			getGithubInfo(githubToken, &packageInfo)
-			packageInfoList = append(packageInfoList, packageInfo)
-			fmt.Println("📦✅ " + packageName + ", Code: 1")
-		} else {
-			// 无法获取信息
-			packageInfoList = append(
-				packageInfoList,
-				PackageInfo{
-					Code: 0,
-					Name: packageName,
-				},
-			)
-			fmt.Println("📦❌ " + packageName + ", Code: 0")
+		if data.Name == "" {
+			packageInfoList = append(packageInfoList, PackageInfo{Code: 0, Name: packageName})
+			fmt.Printf("📦❌ %s, Code: 0\n", packageName)
+			continue
 		}
+
+		// 可获取信息
+		packageInfo := PackageInfo{
+			Code:         1,
+			Name:         data.Name,
+			Version:      data.Latest.Pubspec.Version,
+			Description:  data.Latest.Pubspec.Description,
+			Homepage:     data.Latest.Pubspec.Homepage,
+			Repository:   data.Latest.Pubspec.Repository,
+			IssueTracker: data.Latest.Pubspec.IssueTracker,
+			Published:    data.Latest.Published,
+			ScoreInfo:    getPackageScoreInfo(data.Name),
+		}
+		getGithubInfo(githubToken, &packageInfo)
+		packageInfoList = append(packageInfoList, packageInfo)
+		fmt.Printf("📦✅ %s, Code: 1\n", packageName)
 	}
 	return packageInfoList
 }
 
 // 获取 Package score 信息
-// [packageName] 单个 package 名称
+// - [packageName] 单个 package 名称
 func getPackageScoreInfo(packageName string) PackageScoreInfo {
 	printErrTitle := "📦⚠️ PackageScoreInfo: "
-	res, err := http.Get("https://pub.dev/api/packages/" + packageName + "/score")
+	res, err := http.Get(fmt.Sprintf("https://pub.dev/api/packages/%s/score", packageName))
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
-	defer res.Body.Close()
 	jsonData, err := io.ReadAll(res.Body)
+	res.Body.Close()
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 	var data PackageScoreInfo
-	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+	if err := json.Unmarshal(jsonData, &data); err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 
 	// 获取 Tags 相关内容
-	var tagsPlatform []string
 	for _, value := range data.Tags {
-		tag := strings.Split(value, ":")
-		tagName := tag[0]
-		tagValue := tag[1]
+		tag := strings.SplitN(value, ":", 2)
 		// TagsPlatform
-		if tagName == "platform" {
-			tagsPlatform = append(tagsPlatform, tagValue)
+		if len(tag) == 2 && tag[0] == "platform" {
+			data.TagsPlatform = append(data.TagsPlatform, tag[1])
 		}
 	}
-	data.TagsPlatform = tagsPlatform
 	return data
 }
 
 // 获取 Github 信息
-// [githubToken] Github Token
-// [packageInfo] 当前 package 信息
+// - [githubToken] Github Token
+// - [packageInfo] 当前 package 信息
 func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
 	if packageInfo.Code == 0 {
 		return
@@ -298,13 +304,13 @@ func getGithubInfo(githubToken string, packageInfo *PackageInfo) {
 }
 
 // 获取 Github 基础信息
-// [githubToken] Github Token
-// [user] 用户
-// [repo] 仓库
+// - [githubToken] Github Token
+// - [user] 用户
+// - [repo] 仓库
 func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseInfo {
 	printErrTitle := "📦⚠️ GithubBaseInfo: "
 	client := &http.Client{}
-	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo, strings.NewReader(""))
+	resp, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s", user, repo), strings.NewReader(""))
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
@@ -315,13 +321,13 @@ func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseI
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
-	defer res.Body.Close()
 	jsonData, err := io.ReadAll(res.Body)
+	res.Body.Close()
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 	var data GithubBaseInfo
-	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+	if err := json.Unmarshal(jsonData, &data); err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 
@@ -329,15 +335,14 @@ func getGithubBaseInfo(githubToken string, user string, repo string) GithubBaseI
 }
 
 // 获取 Github 贡献者信息
-// [githubToken] Github Token
-// [user] 用户
-// [repo] 仓库
-//
+// - [githubToken] Github Token
+// - [user] 用户
+// - [repo] 仓库
 // @return (贡献者列表, 贡献者总数（最多100）)
 func getGithubContributorsInfo(githubToken string, user string, repo string) ([]GithubContributorsInfo, int) {
 	printErrTitle := "📦⚠️ GithubContributorsInfo: "
 	client := &http.Client{}
-	resp, err := http.NewRequest("GET", "https://api.github.com/repos/"+user+"/"+repo+"/contributors?page=1&per_page=100", strings.NewReader(""))
+	resp, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/contributors?page=1&per_page=100", user, repo), strings.NewReader(""))
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
@@ -348,13 +353,13 @@ func getGithubContributorsInfo(githubToken string, user string, repo string) ([]
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
-	defer res.Body.Close()
 	jsonData, err := io.ReadAll(res.Body)
+	res.Body.Close()
 	if err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 	var data []GithubContributorsInfo
-	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+	if err := json.Unmarshal(jsonData, &data); err != nil {
 		fmt.Println(printErrTitle, err)
 	}
 
@@ -374,7 +379,8 @@ func getGithubContributorsInfo(githubToken string, user string, repo string) ([]
 }
 
 // 格式化 Github 信息
-// Return (githubUser, githubRepo)
+// - [string] Github 链接
+// @return (githubUser, githubRepo)
 func formatGithubInfo(value string) (string, string) {
 	var githubUser, githubRepo string
 	result := regexp.MustCompile(`(?:github.com/).*`).FindAllString(value, -1)
@@ -389,102 +395,45 @@ func formatGithubInfo(value string) (string, string) {
 }
 
 // 排序
-// [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
-// [sortMode] 				排序方式 可选：asc(default) | desc
+// - [packageInfoList]  信息列表
+// - [sortField]        排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
+// - [sortMode]         排序方式 可选：asc(default) | desc
 func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode string) {
-	switch sortField {
-	case "name":
-		// 按照 pub 名称排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].Name
-			jData := packageInfoList[j].Name
-			switch sortMode {
-			case "asc":
-				return iData < jData
-			case "desc":
-				return iData > jData
-			default:
-				return iData < jData
-			}
-		})
-	case "published":
-		// 按 pub 最新发布时间排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].Published
-			jData := packageInfoList[j].Published
-			switch sortMode {
-			case "asc":
-				return iData > jData
-			case "desc":
-				return iData < jData
-			default:
-				return iData > jData
-			}
-		})
-	case "pubLikes":
-		// 按 pub likes 排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].ScoreInfo.LikeCount
-			jData := packageInfoList[j].ScoreInfo.LikeCount
-			switch sortMode {
-			case "asc":
-				return iData < jData
-			case "desc":
-				return iData > jData
-			default:
-				return iData < jData
-			}
-		})
-	case "pubDownloads":
-		// 按 pub downloads 排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].ScoreInfo.DownloadCount30Days
-			jData := packageInfoList[j].ScoreInfo.DownloadCount30Days
-			switch sortMode {
-			case "asc":
-				return iData < jData
-			case "desc":
-				return iData > jData
-			default:
-				return iData < jData
-			}
-		})
-	case "githubStars":
-		// 按 github stars 排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].GithubBaseInfo.StargazersCount
-			jData := packageInfoList[j].GithubBaseInfo.StargazersCount
-			switch sortMode {
-			case "asc":
-				return iData < jData
-			case "desc":
-				return iData > jData
-			default:
-				return iData < jData
-			}
-		})
-	default:
-		// 按照 pub 名称排序
-		sort.SliceStable(packageInfoList, func(i, j int) bool {
-			iData := packageInfoList[i].Name
-			jData := packageInfoList[j].Name
-			switch sortMode {
-			case "asc":
-				return iData < jData
-			case "desc":
-				return iData > jData
-			default:
-				return iData < jData
-			}
-		})
-	}
+	isDesc := sortMode == "desc"
+	sort.SliceStable(packageInfoList, func(i, j int) bool {
+		p1 := packageInfoList[i]
+		p2 := packageInfoList[j]
+		var result bool
+		switch sortField {
+		case "name":
+			// 按照 pub 名称排序
+			result = p1.Name < p2.Name
+		case "published":
+			// 按 pub 最新发布时间排序
+			result = p1.Published > p2.Published
+		case "pubLikes":
+			// 按 pub likes 排序
+			result = p1.ScoreInfo.LikeCount < p2.ScoreInfo.LikeCount
+		case "pubDownloads":
+			// 按 pub downloads 排序
+			result = p1.ScoreInfo.DownloadCount30Days < p2.ScoreInfo.DownloadCount30Days
+		case "githubStars":
+			// 按 github stars 排序
+			result = p1.GithubBaseInfo.StargazersCount < p2.GithubBaseInfo.StargazersCount
+		default:
+			result = p1.Name < p2.Name
+		}
+		if isDesc {
+			return !result
+		}
+		return result
+	})
 }
 
 // 组装表格内容
-// [packageInfoList] 	信息列表
-// [sortField] 				排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
-// [sortMode] 				排序方式 可选：asc(default) | desc
+// - [packageInfoList]  信息列表
+// - [sortField]        排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
+// - [sortMode]         排序方式 可选：asc(default) | desc
 func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) string {
 	markdownTableList := []MarkdownTable{}
 	for _, value := range packageInfoList {
@@ -621,10 +570,10 @@ func assembleMarkdownTable(packageInfoList []PackageInfo, sortField string) stri
 }
 
 // 更新 Markdown 表格
-// [filename]	更新的文件
-// [markdown]	更新内容
+// - [filename] 更新的文件
+// - [markdown] 更新内容
 //
-// <!-- md:PubDashboard begin --><!-- md:PubDashboard end -->
+// 识别：<!-- md:PubDashboard begin --><!-- md:PubDashboard end -->
 func updateMarkdownTable(filename string, markdown string) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
@@ -653,10 +602,10 @@ func updateMarkdownTable(filename string, markdown string) error {
 }
 
 // 更新 Markdown Package 总数计数
-// [filename]	更新的文件
-// [total]		总数
+// - [filename] 更新的文件
+// - [total]    总数
 //
-// <!-- md:PubDashboard-total begin --><!-- md:PubDashboard-total end -->
+// 识别：<!-- md:PubDashboard-total begin --><!-- md:PubDashboard-total end -->
 func updateMarkdownPackageTotal(filename string, total int) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
