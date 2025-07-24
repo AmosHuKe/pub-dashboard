@@ -436,7 +436,7 @@ func getGithubContributorsInfo(githubToken string, user string, repo string) ([]
 //   - [value] Github 链接
 //
 // 返回值:
-//   - githubUser 信息,
+//   - githubUser 信息
 //   - githubRepo 信息
 func formatGithubInfo(value string) (string, string) {
 	var githubUser, githubRepo string
@@ -494,7 +494,6 @@ func sortPackageInfo(packageInfoList []PackageInfo, sortField string, sortMode s
 // 参数:
 //   - [packageInfoList]  信息列表
 //   - [sortField]        排序字段 可选：name(default) | published | pubLikes | pubDownloads | githubStars
-//   - [sortMode]         排序方式 可选：asc(default) | desc
 //
 // 返回值:
 //   - markdown 表格内容

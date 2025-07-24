@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.1.2 (Unreleased)
+## (Unreleased)
+
+## 1.1.2
 
 ### Improvements
 
