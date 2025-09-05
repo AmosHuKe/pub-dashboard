@@ -1,6 +1,10 @@
 # Changelog
 
-## (Unreleased)
+## 1.1.3 (Unreleased)
+
+### Improvements
+
+- Bump Golang from 1.24.5 to 1.25.1
 
 ## 1.1.2
 
