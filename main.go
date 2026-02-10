@@ -253,7 +253,7 @@ func getPackageInfo(githubToken string, packagesName string) ([]PackageInfo, err
 		}
 		var data PackageBaseInfo
 		if err := json.Unmarshal(jsonData, &data); err != nil {
-			fmt.Printf(printErrTitle, err)
+			fmt.Println(printErrTitle, err)
 		}
 		if data.Name == "" {
 			packageInfoList = append(packageInfoList, PackageInfo{Code: 0, Name: packageName})
