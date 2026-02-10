@@ -277,7 +277,7 @@ func getPackageInfo(githubToken string, packagesName string) ([]PackageInfo, err
 		if err != nil {
 			return nil, err
 		}
-    packageInfo.ScoreInfo = scoreInfo
+		packageInfo.ScoreInfo = scoreInfo
 
 		if err := getGithubInfo(githubToken, &packageInfo); err != nil {
 			return nil, err
@@ -356,13 +356,13 @@ func getGithubInfo(githubToken string, packageInfo *PackageInfo) error {
 	if packageInfo.GithubUser != "" && packageInfo.GithubRepo != "" {
 		githubBaseInfo, err := getGithubBaseInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
 		if err != nil {
-    	return err
+			return err
 		}
 		packageInfo.GithubBaseInfo = githubBaseInfo
 
 		githubContributorsInfo, contributorsTotal, err := getGithubContributorsInfo(githubToken, packageInfo.GithubUser, packageInfo.GithubRepo)
 		if err != nil {
-    	return err
+			return err
 		}
 		packageInfo.GithubContributorsInfo = githubContributorsInfo
 		packageInfo.GithubBaseInfo.ContributorsTotal = contributorsTotal
