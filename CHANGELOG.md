@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.1.3 (Unreleased)
+## (Unreleased)
+
+## 1.1.3
 
 ### Improvements
 
 - Bump Golang from 1.24.5 to 1.25.7
+- supply chain security
 
 ## 1.1.2
 
