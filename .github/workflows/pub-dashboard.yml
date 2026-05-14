@@ -9,6 +9,9 @@ on:
       - 'action.yaml'
       - 'main.go'
 
+# Disable permissions for all of the available permissions
+permissions: {}
+
 jobs:
   pub-dashboard-job:
     runs-on: ubuntu-latest
