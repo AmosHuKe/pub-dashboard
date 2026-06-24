@@ -39,6 +39,8 @@ jobs:
   pub-dashboard-job:
     runs-on: ubuntu-latest
     name: pub-dashboard
+    permissions:
+      contents: write
     steps:
       - name: run pub-dashboard
         uses: AmosHuKe/pub-dashboard@v1
