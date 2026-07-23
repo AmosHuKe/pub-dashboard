@@ -56,18 +56,18 @@ jobs:
 ...
 ```
 
-| Setting | Default | Value | Description |  
-|---------|---------|-------|-------------|
-| github_token <sup>`required`</sup> | - | - | Github Token with repo permissions |
-| github_repo <sup>`required`</sup> | - | - | Github repo to be manipulated |
-| commit_message | docs(pub-dashboard): pub-dashboard has updated readme | - | Commit message |
-| committer_username | github-actions[bot] | - | Committer username |
-| committer_email | 41898282+github-actions[bot]@users.noreply.github.com | - | Committer email |
-| filename | README.md | - | Markdown file <br/> e.g. "README.md" "test/test.md" |
-| publisher_list | - | - | Publisher name (`,` split) <br/> e.g. "aa,bb,cc" |
-| package_list | - | - | Package name (`,` split) <br/> e.g. "aa,bb,cc" |
-| sort_field | name | name, published, pubLikes, pubDownloads, githubStars | Sort field |
-| sort_mode | asc | asc, desc | Sort mode |
+| Setting                            | Default                                               | Value                                                | Description                                                                                                                                         |
+| ---------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| github_token <sup>`required`</sup> | -                                                     | -                                                    | Github Token with repo permissions                                                                                                                  |
+| github_repo <sup>`required`</sup>  | -                                                     | -                                                    | Github repo to be manipulated                                                                                                                       |
+| commit_message                     | docs(pub-dashboard): pub-dashboard has updated readme | -                                                    | Commit message                                                                                                                                      |
+| committer_username                 | github-actions[bot]                                   | -                                                    | Committer username                                                                                                                                  |
+| committer_email                    | 41898282+github-actions[bot]@users.noreply.github.com | -                                                    | Committer email                                                                                                                                     |
+| filename                           | README.md                                             | -                                                    | Markdown file <br/> e.g. "README.md" "test/test.md"                                                                                                 |
+| publisher_list                     | -                                                     | -                                                    | **Known Limitations**: <br/> - Each Publisher can search up to 10 pages (100 packages). <br/><br/> Publisher name (`,` split) <br/> e.g. "aa,bb,cc" |
+| package_list                       | -                                                     | -                                                    | Package name (`,` split) <br/> e.g. "aa,bb,cc"                                                                                                      |
+| sort_field                         | name                                                  | name, published, pubLikes, pubDownloads, githubStars | Sort field                                                                                                                                          |
+| sort_mode                          | asc                                                   | asc, desc                                            | Sort mode                                                                                                                                           |
 
 ## Tips 💡
 

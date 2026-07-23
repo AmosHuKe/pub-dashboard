@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.5
+
+### Fixes
+
+- Fix the error caused by the publisher search limit.  
+  Each Publisher can search up to 10 pages (100 packages).  
+
 ## 1.1.4
 
 ### Improvements

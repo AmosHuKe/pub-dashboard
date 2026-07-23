@@ -214,12 +214,14 @@ func getPublisherPackages(ctx context.Context, client *http.Client, publisherNam
 		// 逐页查询，直至返回空结果
 		for pageIndex := 1; ; pageIndex++ {
 			fmt.Printf("🌏🔗 Publisher: %s, Page: %d \n", publisher, pageIndex)
-			rawURL := fmt.Sprintf("https://pub.dev/api/search?q=publisher:%s&page=%d", url.QueryEscape(publisher), pageIndex)
+			rawURL := fmt.Sprintf("https://pub.dev/api/search?q=publisher:%s&page=%d&sort=downloads", url.QueryEscape(publisher), pageIndex)
 			body, status, err := httpGetWithRetry(ctx, client, rawURL, nil)
 			if err != nil {
 				return nil, fmt.Errorf("%s%w", printErrTitle, err)
 			}
-			if status == http.StatusNotFound {
+			// http.StatusNotFound 		不存在更多数据
+			// http.StatusBadRequest 	可能超出最多 10 页的限制
+			if status == http.StatusNotFound || status == http.StatusBadRequest {
 				break // 无更多结果
 			}
 			if status != http.StatusOK {
